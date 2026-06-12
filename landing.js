@@ -90,13 +90,13 @@
       const valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.value.trim());
       if (!valid) {
         email.classList.add("err");
-        msg.textContent = "Введите корректный email.";
+        msg.textContent = "Нужен корректный email.";
         msg.classList.add("bad");
         return;
       }
       email.classList.remove("err");
       if (!consent.checked) {
-        msg.textContent = "Отметьте согласие на обработку персональных данных.";
+        msg.textContent = "Нужно согласие на обработку персональных данных.";
         msg.classList.add("bad");
         return;
       }
