@@ -1,0 +1,15 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Vidi</title>
+        <item>
+            <title>0.6</title>
+            <pubDate>Wed, 17 Jun 2026 15:39:55 +0300</pubDate>
+            <sparkle:version>6</sparkle:version>
+            <sparkle:shortVersionString>0.6</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-0.6.dmg" length="35745079" type="application/octet-stream" sparkle:edSignature="jx1/pUIqGUTqoy+47vaGHhNYVTm68te83dovp5qPwgE6Emioc5cixUR4LeFOmp4WWsT6pkDjcYDYL6bkDF2wAw=="/>
+        </item>
+    </channel>
+</rss>
