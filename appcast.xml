@@ -3,6 +3,18 @@
     <channel>
         <title>Vidi</title>
         <item>
+            <title>0.7</title>
+            <pubDate>Thu, 18 Jun 2026 11:28:43 +0300</pubDate>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>0.7</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-0.7.dmg" length="35864372" type="application/octet-stream" sparkle:edSignature="Uu2f4pnlYGJzxNmJfXITLYit58ZjKXyURvOR0lqZDBSNsVmDIulD3ipiv/NdtfQuOghJnaN6jqlazWiOd5GAAw=="/>
+            <sparkle:deltas>
+                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi7-6.delta" sparkle:deltaFrom="6" length="451278" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="RQo+BwPUyECZTg4oO6xo8JkjlvjJiW0KGbA0uFh9c1ZbkMqMvsVZLOJ20ATXZtPCvZdWeraHNCUGNxzbW7AzCg=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.6</title>
             <pubDate>Wed, 17 Jun 2026 15:39:55 +0300</pubDate>
             <sparkle:version>6</sparkle:version>
