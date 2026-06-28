@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Vidi — DICOM Viewer для Mac: просмотр КЛКТ, 3D и планирование имплантации</title>
-<meta name="description" content="Нативный просмотрщик стоматологических КЛКТ-снимков для macOS: MPR, 3D, панорама, разметка нерва, планирование имплантации. Открывает архивы всех известных фирм КЛКТ-аппаратов и любой DICOM. Локально и приватно." />
+<meta name="description" content="Нативный просмотрщик стоматологических КЛКТ-снимков для macOS: MPR, 3D, панорама, разметка канала, планирование имплантации. Открывает архивы всех известных фирм КЛКТ-аппаратов и любой DICOM. Локально и приватно." />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Vidi — DICOM Viewer для Mac: КЛКТ, 3D, планирование имплантации" />
 <meta property="og:description" content="Нативный просмотрщик стоматологических КЛКТ-снимков для macOS. Открывает архивы всех известных фирм КЛКТ-аппаратов и любой DICOM. Локально и приватно." />
@@ -29,7 +29,7 @@
   "applicationCategory": "HealthApplication",
   "softwareVersion": "0.6",
   "offers": { "@type": "Offer", "price": "1099", "priceCurrency": "RUB", "description": "Демо бесплатно; платная подписка 1099 ₽/месяц через Telegram-бот" },
-  "description": "Нативный просмотрщик стоматологических КЛКТ-снимков для macOS: MPR, 3D, панорама, разметка нерва, планирование имплантации."
+  "description": "Нативный просмотрщик стоматологических КЛКТ-снимков для macOS: MPR, 3D, панорама, разметка канала, планирование имплантации."
 }
 </script>
 </head>
@@ -162,9 +162,9 @@
         <h3>Три проекции и объёмный 3D</h3>
         <p class="lead">Синхронный просмотр срезов в аксиальной, сагиттальной и корональной проекциях (MPR) — перекрестие связывает все окна. Четвертое окно — 3D рендер черепа c различными масками.</p>
         <ul class="f-points">
-          <li><svg><use href="#i-check"/></svg>Синхронное перекрестие во всех окнах MPR</li>
-          <li><svg><use href="#i-check"/></svg>Косые срезы и slab (MIP / MinIP / усреднение) регулируемой толщины</li>
-          <li><svg><use href="#i-check"/></svg>HU-зонд под курсором и анатомические метки R/L/A/P/S/I</li>
+          <li><svg><use href="#i-check"/></svg>Классический MPR-режим для комфортной работы</li>
+          <li><svg><use href="#i-check"/></svg>Рассматривайте детали благодаря 3D-визуализации в дополнительном окне</li>
+          <li><svg><use href="#i-check"/></svg>Стороны подписаны — R/L, верх/низ. Всегда чёткая ориентация</li>
         </ul>
       </div>
       <div class="f-media reveal d1"><img class="shot-real" src="assets/app-main.webp" alt="Три синхронных проекции MPR и объёмная 3D-реконструкция в Vidi" width="1280" height="790" loading="lazy" /></div>
@@ -175,11 +175,7 @@
       <div class="f-text">
         <svg class="f-ic" style="color:var(--bone)"><use href="#i-wave"/></svg>
         <h3>Панорама прямо из КЛКТ</h3>
-        <p class="lead">Панорамный снимок (ОПТГ-подобный) строится вдоль зубной дуги — гладкая кривая, толщина среза настраивается. Утолщённый срез показывает весь канал или корень целиком.</p>
-        <ul class="f-points">
-          <li><svg><use href="#i-check"/></svg>Реконструкция по кривой вдоль зубной дуги</li>
-          <li><svg><use href="#i-check"/></svg>Экспорт панорамы и скриншотов в PNG</li>
-        </ul>
+        <p class="lead">Панорама (как ОПТГ) строится вдоль зубной дуги: программа сама ведёт кривую по зубному ряду. Привычный ОПТГ — но из данных КЛКТ.</p>
       </div>
       <div class="f-media reveal d1"><img class="shot-real" src="assets/panorama.webp" alt="Панорамная реконструкция (ОПТГ-подобный снимок) вдоль зубной дуги из КЛКТ в Vidi" width="1280" height="790" loading="lazy" /></div>
     </div>
@@ -217,10 +213,10 @@
     <div class="feature reveal">
       <div class="f-text">
         <svg class="f-ic"><use href="#i-folder"/></svg>
-        <h3>Неважно, что прислал пациент</h3>
-        <p class="lead">ZIP, RAR, папка с DICOM — Vidi откроет исследование автоматически.</p>
+        <h3>Открывает почти любой КТ-снимок</h3>
+        <p class="lead">Перетащите папку или архив в окно — исследование откроется само. Вложенные архивы распакуются автоматически.</p>
         <ul class="f-points">
-          <li><svg><use href="#i-check"/></svg>Вкладки исследований и локальная библиотека между запусками</li>
+          <li><svg><use href="#i-check"/></svg>Читает сжатые DICOM (JPEG 2000, JPEG Lossless) — без повторного сжатия, в исходном качестве</li>
           <li><svg><use href="#i-lock"/></svg>Локально и приватно: данные пациента не уходят в облако</li>
         </ul>
       </div>
@@ -288,10 +284,10 @@
     </div>
     <div class="compare">
       <div class="glass cmp them reveal">
-        <div class="cmp-h">Фирменный софт производителя аппарата</div>
+        <div class="cmp-h">Фирменный софт производителя</div>
         <ul>
           <li><svg><use href="#i-x"/></svg>Тяжёлый, часто привязан к Windows</li>
-          <li><svg><use href="#i-x"/></svg>Завязан на конкретный аппарат и клинику</li>
+          <li><svg><use href="#i-x"/></svg>Завязан на конкретный аппарат</li>
           <li><svg><use href="#i-x"/></svg>Сложная установка и настройка</li>
         </ul>
       </div>
@@ -299,8 +295,8 @@
         <div class="cmp-h">Vidi на Mac</div>
         <ul>
           <li><svg><use href="#i-check"/></svg>Лёгкое нативное приложение для macOS</li>
-          <li><svg><use href="#i-check"/></svg>Открывает экспорты любых клиник и стандартный DICOM</li>
-          <li><svg><use href="#i-check"/></svg>Без поиска корневой папки с DICOM файлами</li>
+          <li><svg><use href="#i-check"/></svg>Открывает снимки из любой клиники</li>
+          <li><svg><use href="#i-check"/></svg>Не нужно искать нужную папку в архиве — открывает сразу</li>
         </ul>
       </div>
     </div>
