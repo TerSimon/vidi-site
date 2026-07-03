@@ -3,6 +3,22 @@
     <channel>
         <title>Vidi</title>
         <item>
+            <title>1.0</title>
+            <pubDate>Fri, 03 Jul 2026 14:31:30 +0300</pubDate>
+            <sparkle:version>18</sparkle:version>
+            <sparkle:shortVersionString>1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-1.0.dmg" length="44608438" type="application/octet-stream" sparkle:edSignature="spOfEh9YufaygWuZGDkEJHidHrTu7UEEerOKgUh7CyAhRYRDfOgyH0BMErerAeNQVk5ijiQP5m6XN7bmjQ09AA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi18-17.delta" sparkle:deltaFrom="17" length="286362" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="yoDEo5LO3agKbQKourAv6LVvN+m+e0e0ycb4YkvFSFfbQRj3ftXFk8wrqGLkagjLLEqGf4ch+4b/bZpfY+eUCA=="/>
+                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi18-16.delta" sparkle:deltaFrom="16" length="424110" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="xtWd4H3nf2tSX9k5iJLv0R/4onMtstDrRpr0nbu78s/n/bYbYkktlyx3n73rHy7EHIcELGu/NxRKCKyub7TQDA=="/>
+                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi18-15.delta" sparkle:deltaFrom="15" length="465066" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="KckbD/r6v2bj15zlBtjZRiHuDY7UxqqarzHbQyishzc7hcAhcK+hwXJo5jmkqO8br4f+HKpN/lG29WRHC4vzAQ=="/>
+                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi18-14.delta" sparkle:deltaFrom="14" length="455170" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="BHnM+by83BjTdnTtNyeY0owIl4pfNxUozzvFF+MZgnNcmoNXgsU99mWvF4SHs+ZRcYs8+RB0OnsOyw+Kl2H5Dw=="/>
+                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi18-13.delta" sparkle:deltaFrom="13" length="4051270" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="SUBIc9UbvpY8Q9hHV7NZFUD50ZmmXG19l7xj13aJQ2lBdbToCbD4b4Ij7zIDfhUScwqUq9rCNb/kwI+PICxrCg=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.7.10</title>
             <pubDate>Mon, 29 Jun 2026 00:03:24 +0300</pubDate>
             <sparkle:version>17</sparkle:version>
@@ -29,19 +45,6 @@
                 <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi16-15.delta" sparkle:deltaFrom="15" length="299726" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="JUbJ7vzomO9PYCOmw56ZQwWxpkzl0Rq6T85W9SphEKFB+z8KJLbqcLvuLkadZTqRDFZVgP4hz/nIBDK23MrhDA=="/>
                 <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi16-14.delta" sparkle:deltaFrom="14" length="321582" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Mhez093V+hH170bDS+JWU8Qo9SJWHi1pGLnCV38T9k9J8h1jHFu/YVWYV+sG9lURHcfRx1D8YBd0EwjN2KW7AQ=="/>
                 <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi16-13.delta" sparkle:deltaFrom="13" length="3976750" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="sdA5b0GXMjet8rhYgo0P5xaA9+Z9gTxSLiUhmGujZ/Z998VMMmNoWGocL3JOORCEAapeXOjOETGN91q0JjsSBg=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>0.7.8</title>
-            <pubDate>Sun, 28 Jun 2026 16:40:49 +0300</pubDate>
-            <sparkle:version>15</sparkle:version>
-            <sparkle:shortVersionString>0.7.8</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-0.7.8.dmg" length="44547393" type="application/octet-stream" sparkle:edSignature="+C+iqg1mLw6ng8PpUH495fBgMYBeHBFsBN3Cbvrx6Wac0yd6bZs27Ww61r0v7rc+QzyuE//Q27m17ZhwAjXjCg=="/>
-            <sparkle:deltas>
-                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi15-14.delta" sparkle:deltaFrom="14" length="159870" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="0qxIBJgMOba52XEQ0UwKMCnTocADlPgGfVynbq2tLS9Ay3sN7bMSzYEJgohmyvQW2ZPLkZdf5cXO5FfqA1XzCA=="/>
-                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi15-13.delta" sparkle:deltaFrom="13" length="3940110" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="iFLj6x7zeKKfq32+SsiCEIX16UMXumqfJko7SHkWdH5szRFs5y70PlhDd9z49IHFYbqAl307wREsC1/Kz/uHBA=="/>
             </sparkle:deltas>
         </item>
     </channel>
