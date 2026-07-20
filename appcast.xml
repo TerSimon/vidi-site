@@ -4,6 +4,21 @@
         <title>Vidi</title>
         <item>
             <title>1.2.5</title>
+            <pubDate>Mon, 20 Jul 2026 16:46:07 +0300</pubDate>
+            <sparkle:version>24</sparkle:version>
+            <sparkle:shortVersionString>1.2.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-1.2.5.dmg" length="45205349" type="application/octet-stream" sparkle:edSignature="uJrCL7CjAz91uQKuV0otOgiSjftVvoOtV/r7V0rafY6A+ZIk6swFR6tN7rkVPALQ2wHyUfDwK6DulMd6qqSCAw=="/>
+            <sparkle:deltas>
+                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi24-22.delta" sparkle:deltaFrom="22" length="1581022" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="w1nPOlOW/q95ALIrjFmDg69Bdw2IPJo69LrFmiOqDSZe6j2xCJunQdL7Hbwt3Ojpom94K/eNY2eihXDMud+PDQ=="/>
+                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi24-21.delta" sparkle:deltaFrom="21" length="1748046" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="E4COzhsqaq14TGMVXIzMHm9tHL0l5tQxbK0Ne7fbtydJ3DtzWPaAGnKirBBzvZ2RJ3WN4vSkVE6cyiPBydY8DQ=="/>
+                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi24-20.delta" sparkle:deltaFrom="20" length="2068822" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="vgQqt1t4iR8/27PM0+fMsYIYRDBOjv3bx2fJZav2y9X2yy08nD6VradbMqIy8CzAHuqA2RXgz+TjJxo7WlLxAw=="/>
+                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi24-18.delta" sparkle:deltaFrom="18" length="2067338" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="rniXO/v+UXp279b9H7QtI/kvz8k+ja6SvPuMEotQSrtBy2zzygXdq2Gh7AP71LrOm5aXuuEJWeV2TjfzCQ/zDQ=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
+            <title>1.2.5</title>
             <pubDate>Mon, 20 Jul 2026 14:40:19 +0300</pubDate>
             <sparkle:version>23</sparkle:version>
             <sparkle:shortVersionString>1.2.5</sparkle:shortVersionString>
@@ -29,20 +44,6 @@
                 <enclosure url="https://vidiviewer.ru/downloads/Vidi22-21.delta" sparkle:deltaFrom="21" length="903878" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="ul6xdsTTj+dfaY9Mb4Jhd1b6d9dRcAck8AzGyK3rXQ4W57rrqbikhIoH+KPwnQjARdDc+aHFtOt2Et44QTR/AA=="/>
                 <enclosure url="https://vidiviewer.ru/downloads/Vidi22-20.delta" sparkle:deltaFrom="20" length="1596130" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="ylEUh4AXXrPe6e2CY79cyKYFj6TS4dt8BtTFyZO728Z/aIzdA3mtryYC8OolNYWfSWTAgurT1dipHrOPm7JsBQ=="/>
                 <enclosure url="https://vidiviewer.ru/downloads/Vidi22-18.delta" sparkle:deltaFrom="18" length="1449062" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="xb/HnbG7Mn+ppSeQvlMiXsLAblKnvKbQXGAQn1ZDnwWEQNAheL244w4oxXnWFyogNAKCHQBq/JDmgoO9wkEWBw=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>1.1.1</title>
-            <pubDate>Sun, 12 Jul 2026 23:47:00 +0300</pubDate>
-            <sparkle:version>21</sparkle:version>
-            <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-1.1.1.dmg" length="45117280" type="application/octet-stream" sparkle:edSignature="TxbUB9MwS4V6pe8FO5BtJB7yJ7OcVmY5XL9321awW4z9f+C3vmCQjcW8qyFKJPSt45nFRt2akvP5vHzeqfoABg=="/>
-            <sparkle:deltas>
-                <enclosure url="https://vidiviewer.ru/downloads/Vidi21-20.delta" sparkle:deltaFrom="20" length="1357218" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="reK5rJqt6PmBrdvnSx19TifT7AyGvIyqQ/56YKtcUaVlVDN+OHMa0YwahwJ95PHBh5PM+8aY8pnGGwsIlN12DA=="/>
-                <enclosure url="https://vidiviewer.ru/downloads/Vidi21-19.delta" sparkle:deltaFrom="19" length="790322" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="jDmkFTdIZXbwdcs6SEAlOBVZcitb2RG/MZZFqdmz8GztPx0aM0sDzba0XF3uWRLkzrPvoOotSlnyR0qkQWRuDQ=="/>
-                <enclosure url="https://vidiviewer.ru/downloads/Vidi21-18.delta" sparkle:deltaFrom="18" length="1205894" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="MmjjUxVPh30Y+1E+sq2xus/tYsXB2i7+gJLZxDDRRGeMlJlXQOrAAaC+w/554xgIX3VB6jJGyLGa0ejNb+ePCw=="/>
             </sparkle:deltas>
         </item>
     </channel>
