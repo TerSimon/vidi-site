@@ -3,6 +3,15 @@
     <channel>
         <title>Vidi</title>
         <item>
+            <title>1.2.7</title>
+            <pubDate>Tue, 21 Jul 2026 23:08:33 +0300</pubDate>
+            <sparkle:version>27</sparkle:version>
+            <sparkle:shortVersionString>1.2.7</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-1.2.7.dmg" length="45244010" type="application/octet-stream" sparkle:edSignature="Y6XFeVGiY7D4oa/B8rIs+baVzF5Eq9/icvkJqqEaF6C5PGNdeeDL5fKdYL7W/Qfv1azOIcuBYwOMvtGjECm7DA=="/>
+        </item>
+        <item>
             <title>1.2.6</title>
             <pubDate>Mon, 20 Jul 2026 19:12:52 +0300</pubDate>
             <sparkle:version>26</sparkle:version>
@@ -19,21 +28,6 @@
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-1.2.5.dmg" length="45205753" type="application/octet-stream" sparkle:edSignature="r8kLp2/zTYzOao14k/1nuBk7XLUD4AVSdFxwctwAbLTA9Bn5MWhz8AnEiwRbe8g/OHjILegd02M1Bh2rMIVsDA=="/>
-        </item>
-        <item>
-            <title>1.2.5</title>
-            <pubDate>Mon, 20 Jul 2026 16:46:07 +0300</pubDate>
-            <sparkle:version>24</sparkle:version>
-            <sparkle:shortVersionString>1.2.5</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-1.2.5.dmg" length="45205349" type="application/octet-stream" sparkle:edSignature="uJrCL7CjAz91uQKuV0otOgiSjftVvoOtV/r7V0rafY6A+ZIk6swFR6tN7rkVPALQ2wHyUfDwK6DulMd6qqSCAw=="/>
-            <sparkle:deltas>
-                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi24-22.delta" sparkle:deltaFrom="22" length="1581022" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="w1nPOlOW/q95ALIrjFmDg69Bdw2IPJo69LrFmiOqDSZe6j2xCJunQdL7Hbwt3Ojpom94K/eNY2eihXDMud+PDQ=="/>
-                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi24-21.delta" sparkle:deltaFrom="21" length="1748046" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="E4COzhsqaq14TGMVXIzMHm9tHL0l5tQxbK0Ne7fbtydJ3DtzWPaAGnKirBBzvZ2RJ3WN4vSkVE6cyiPBydY8DQ=="/>
-                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi24-20.delta" sparkle:deltaFrom="20" length="2068822" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="vgQqt1t4iR8/27PM0+fMsYIYRDBOjv3bx2fJZav2y9X2yy08nD6VradbMqIy8CzAHuqA2RXgz+TjJxo7WlLxAw=="/>
-                <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi24-18.delta" sparkle:deltaFrom="18" length="2067338" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="rniXO/v+UXp279b9H7QtI/kvz8k+ja6SvPuMEotQSrtBy2zzygXdq2Gh7AP71LrOm5aXuuEJWeV2TjfzCQ/zDQ=="/>
-            </sparkle:deltas>
         </item>
     </channel>
 </rss>
