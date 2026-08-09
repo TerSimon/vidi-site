@@ -3,6 +3,15 @@
     <channel>
         <title>Vidi</title>
         <item>
+            <title>1.2.9</title>
+            <pubDate>Sun, 09 Aug 2026 19:13:17 +0300</pubDate>
+            <sparkle:version>29</sparkle:version>
+            <sparkle:shortVersionString>1.2.9</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-1.2.9.dmg" length="45715357" type="application/octet-stream" sparkle:edSignature="zXcLHTg9/tPmsYyY2edlasWAyqexCdndDDD76gz4rRFxEx+dZKkAaBMZCMwQ2r9A7xUWCuU/spyhVarJ9lBPAA=="/>
+        </item>
+        <item>
             <title>1.2.8</title>
             <pubDate>Wed, 22 Jul 2026 15:46:18 +0300</pubDate>
             <sparkle:version>28</sparkle:version>
