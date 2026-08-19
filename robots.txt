@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
 
+User-agent: Yandex
+Allow: /
+
 Sitemap: https://vidiviewer.ru/sitemap.xml
