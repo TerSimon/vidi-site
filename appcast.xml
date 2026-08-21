@@ -9,7 +9,7 @@
             <sparkle:shortVersionString>1.2.9</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-1.2.9.dmg" length="45715357" type="application/octet-stream" sparkle:edSignature="zXcLHTg9/tPmsYyY2edlasWAyqexCdndDDD76gz4rRFxEx+dZKkAaBMZCMwQ2r9A7xUWCuU/spyhVarJ9lBPAA=="/>
+            <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-1.2.9.dmg" length="45882570" type="application/octet-stream" sparkle:edSignature="Gdbr0yxVkyWqV19acNOldkWQrOGA5diaUaHMfEFLCgggWIt1pX08HwKPecdkljxUNyuLHrM6qYxR2WLPr/mUBw=="/>
         </item>
         <item>
             <title>1.2.8</title>
