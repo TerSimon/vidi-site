@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-hero="a" data-anim="on">
+<html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,453 +7,561 @@
 <meta name="yandex-verification" content="0adbed5610671c03" />
 <title>Vidi — DICOM Viewer для Mac: просмотр КЛКТ, 3D и планирование имплантации</title>
 <meta name="description" content="Нативный просмотрщик стоматологических КЛКТ-снимков для macOS: MPR, 3D, панорама, разметка канала, планирование имплантации. Открывает архивы всех известных фирм КЛКТ-аппаратов и любой DICOM. Локально и приватно." />
+<link rel="canonical" href="https://vidiviewer.ru/" />
 <meta property="og:type" content="website" />
+<meta property="og:site_name" content="Vidi" />
+<meta property="og:locale" content="ru_RU" />
 <meta property="og:title" content="Vidi — DICOM Viewer для Mac: КЛКТ, 3D, планирование имплантации" />
 <meta property="og:description" content="Нативный просмотрщик стоматологических КЛКТ-снимков для macOS. Открывает архивы всех известных фирм КЛКТ-аппаратов и любой DICOM. Локально и приватно." />
 <meta property="og:url" content="https://vidiviewer.ru/" />
 <meta property="og:image" content="https://vidiviewer.ru/assets/og-image.png" />
-<link rel="canonical" href="https://vidiviewer.ru/" />
-<meta property="og:locale" content="ru_RU" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Vidi — DICOM Viewer для Mac: три проекции КЛКТ и 3D" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="theme-color" content="#0B0E14" />
-<link rel="icon" href="assets/icon.png" type="image/png" />
+<meta name="theme-color" content="#0A0D14" />
+<meta name="color-scheme" content="dark" />
+<link rel="icon" href="favicon.ico" sizes="32x32" />
+<link rel="icon" href="assets/icon.png" type="image/png" sizes="180x180" />
 <link rel="apple-touch-icon" href="assets/icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<!-- Шрифты дизайн-системы грузятся без блокировки отрисовки; класс .js включает сцену в hero до первого кадра -->
+<script>document.documentElement.classList.add("js");(function(){var l=document.createElement("link");l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap";document.head.appendChild(l);setTimeout(function(){if(!window.__vidiReady)document.documentElement.classList.add("no-scene")},6000)})();</script>
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" /></noscript>
 <link rel="stylesheet" href="styles.css" />
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "Vidi — DICOM Viewer",
-  "operatingSystem": "macOS 14.0+",
-  "applicationCategory": "HealthApplication",
-  "softwareVersion": "1.3",
-  "offers": { "@type": "Offer", "price": "599", "priceCurrency": "RUB", "description": "Демо бесплатно; платная подписка 599 ₽/месяц через Telegram-бот" },
-  "description": "Нативный просмотрщик стоматологических КЛКТ-снимков для macOS: MPR, 3D, панорама, разметка канала, планирование имплантации."
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://vidiviewer.ru/#org",
+      "name": "Vidi",
+      "url": "https://vidiviewer.ru/",
+      "logo": "https://vidiviewer.ru/assets/icon.png",
+      "email": "vidiviewer@yandex.ru",
+      "sameAs": ["https://t.me/vidivieverbot", "https://www.instagram.com/vidiviewer"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://vidiviewer.ru/#website",
+      "url": "https://vidiviewer.ru/",
+      "name": "Vidi — DICOM Viewer для Mac",
+      "inLanguage": "ru",
+      "publisher": { "@id": "https://vidiviewer.ru/#org" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "Vidi — DICOM Viewer",
+      "url": "https://vidiviewer.ru/",
+      "image": "https://vidiviewer.ru/assets/og-image.png",
+      "screenshot": "https://vidiviewer.ru/assets/app-main.webp",
+      "description": "Нативный просмотрщик стоматологических КЛКТ-снимков для macOS: MPR, 3D, панорама, разметка канала, планирование имплантации.",
+      "applicationCategory": "HealthApplication",
+      "operatingSystem": "macOS 14.0+",
+      "processorRequirements": "Apple Silicon (M1 и новее)",
+      "memoryRequirements": "16 ГБ ОЗУ — рекомендуется",
+      "softwareVersion": "1.3",
+      "downloadUrl": "https://storage.yandexcloud.net/videviewergmd/Vidi-1.3.dmg",
+      "fileSize": "46 МБ",
+      "inLanguage": "ru",
+      "publisher": { "@id": "https://vidiviewer.ru/#org" },
+      "offers": [
+        { "@type": "Offer", "name": "Веб-демо", "price": "0", "priceCurrency": "RUB", "url": "https://vidiviewer.ru/demo/", "description": "Демонстрационное КЛКТ в браузере: три проекции, 3D и измерения" },
+        { "@type": "Offer", "name": "Подписка", "price": "599", "priceCurrency": "RUB", "description": "Подписка через Telegram-бот",
+          "priceSpecification": { "@type": "UnitPriceSpecification", "price": "599", "priceCurrency": "RUB", "billingDuration": "P1M" } }
+      ]
+    }
+  ]
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#top">Перейти к содержанию</a>
 <div class="bg-field"></div>
-<div class="bg-grid"></div>
 
-<!-- ===== Icon sprite ===== -->
+<!-- Иконки: сетка 24×24, линия 1.6px, скруглённые концы и соединения -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-apple" viewBox="0 0 24 24"><path fill="currentColor" d="M16.4 12.6c0-2.2 1.8-3.3 1.9-3.3-1-1.5-2.7-1.7-3.3-1.7-1.4-.1-2.7.8-3.4.8-.7 0-1.8-.8-3-.8-1.5 0-2.9.9-3.7 2.3-1.6 2.7-.4 6.8 1.1 9 .7 1.1 1.6 2.3 2.7 2.3 1.1 0 1.5-.7 2.8-.7 1.3 0 1.6.7 2.8.7 1.2 0 1.9-1.1 2.6-2.1.8-1.2 1.2-2.3 1.2-2.4-.1 0-2.3-.9-2.4-3.4zM14.3 6.2c.6-.7 1-1.7.9-2.7-.9 0-1.9.6-2.5 1.3-.5.6-1 1.6-.9 2.6 1 .1 1.9-.5 2.5-1.2z"/></symbol>
-  <symbol id="i-arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></symbol>
-  <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5zM3 13l9 5 9-5M3 17.5l9 5 9-5"/></symbol>
-  <symbol id="i-wave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c2.5-7 4.5-7 6 0s3.5 7 6 0 3.5-7 6 0"/></symbol>
-  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></symbol>
-  <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5M8 13h8M8 17h6"/></symbol>
-  <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></symbol>
   <symbol id="i-tg" viewBox="0 0 24 24"><path fill="currentColor" d="M21.9 4.3 18.6 20c-.2 1.1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.3-4.9 9-8.1c.4-.3-.1-.5-.6-.2L6.1 13.1l-4.8-1.5c-1-.3-1-1 .2-1.5l18.7-7.2c.9-.3 1.6.2 1.4 1.4z"/></symbol>
-  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10" width="15" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
-  <symbol id="i-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 1.5v3M15 1.5v3M9 19.5v3M15 19.5v3M1.5 9h3M1.5 15h3M19.5 9h3M19.5 15h3"/></symbol>
-  <symbol id="i-ram" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="10" rx="1.5"/><path d="M7 7v-2M12 7v-2M17 7v-2M6 11v2M10 11v2M14 11v2M18 11v2"/></symbol>
-  <symbol id="i-mac" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M2 20h20M9.5 16l-.5 4M14.5 16l.5 4"/></symbol>
-  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19.5 6.5"/></symbol>
-  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
-  <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v5M12 18h.01"/></symbol>
-  <symbol id="i-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16z"/></symbol>
-  <symbol id="i-crosshair" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5"/></symbol>
-  <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12M6.5 10.5 12 16l5.5-5.5M5 20h14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19.5 6.5"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/></symbol>
+  <symbol id="i-zip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5M11 5h1M11 8h1M11 11h1M10.5 14h2v3h-2z"/></symbol>
+  <symbol id="i-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2.5v3M15 2.5v3M9 18.5v3M15 18.5v3M2.5 9h3M2.5 15h3M18.5 9h3M18.5 15h3"/></symbol>
+  <symbol id="i-replay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5.5v13l10.5-6.5L8 5.5z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
 </svg>
 
-<!-- ===== Header ===== -->
 <header class="site-header">
-  <div class="wrap nav">
-    <a class="brand" href="#top" aria-label="Vidi — на главную">
-      <img class="logo" src="assets/icon.png" alt="Vidi" width="30" height="30" />
+  <div class="nav">
+    <a class="brand" href="#top">
+      <img class="logo" src="assets/icon-60.webp" alt="" width="28" height="28" />
       Vidi
       <span class="tag">DICOM Viewer</span>
     </a>
-    <nav class="nav-links" aria-label="Основная навигация">
+    <nav class="nav-links" id="site-nav" aria-label="Основная навигация">
+      <a href="#archive">Архивы</a>
       <a href="#features">Возможности</a>
       <a href="#formats">Форматы</a>
-      <a href="#download">Скачать</a>
-      <a href="#faq">FAQ</a>
+      <a href="#download">Цена</a>
+      <a href="#faq">Вопросы</a>
     </nav>
-    <a class="btn btn-primary nav-cta" href="https://storage.yandexcloud.net/videviewergmd/Vidi-1.3.dmg" data-evt="download_nav"><svg><use href="#i-apple"/></svg>Скачать для Mac</a>
-    <a class="btn btn-tg nav-cta" href="https://t.me/vidivieverbot" data-evt="subscribe"><svg><use href="#i-tg"/></svg>Оформить подписку</a>
-    <button class="nav-burger" aria-label="Меню"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    <a class="btn btn-primary nav-cta" href="#download" data-evt="download_nav"><svg aria-hidden="true"><use href="#i-apple"/></svg>Скачать для Mac</a>
+    <button class="nav-burger" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="site-nav">
+      <svg class="i-open" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 8h16M4 16h16"/></svg>
+      <svg class="i-close" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
   </div>
 </header>
 
-<main id="top">
+<main id="top" tabindex="-1">
 
-<!-- ===== HERO — split ===== -->
-<section class="hero hero-variant" id="hero-a">
-  <div class="wrap hero-inner">
-    <div class="hero-copy">
-      <span class="badge reveal"><span class="dot"></span>Нативно для Apple Silicon — чипы M-серии</span>
-      <h1 class="reveal d1">КЛКТ-исследования на&nbsp;Mac — это&nbsp;Vidi</h1>
-      <p class="lead reveal d2">Просмотр, измерения, разметка канала и планирование имплантации. Откройте КТ из любой клиники — папку, архив или DICOM-файл.</p>
-      <div class="hero-cta reveal d2">
-        <a class="btn btn-primary btn-lg" href="#download" data-evt="download"><svg><use href="#i-apple"/></svg>Скачать для Mac</a>
-        <a class="btn btn-ghost btn-lg" href="#features"><svg><use href="#i-arrow-down"/></svg>Смотреть возможности</a>
-      </div>
-      <p class="hero-fine fine reveal d3"><svg width="14" height="14" style="color:var(--ink-3)"><use href="#i-mac"/></svg><span class="os">macOS 14.0+, Apple Silicon.</span> 599 ₽ / месяц</p>
+<!-- ================= HERO ================= -->
+<section class="hero">
+  <div class="wrap">
+    <span class="chip-float"><svg aria-hidden="true"><use href="#i-chip"/></svg>Нативно для Apple Silicon</span>
+    <h1>КЛКТ на&nbsp;Mac&nbsp;— это&nbsp;Vidi</h1>
+    <p class="lede">Перетащите архив из&nbsp;клиники&nbsp;— Vidi сам найдёт исследование и&nbsp;откроет его в&nbsp;трёх проекциях и&nbsp;3D. Панорама, разметка канала и&nbsp;планирование имплантации&nbsp;— в&nbsp;том же окне.</p>
+
+    <div class="hero-cta mac-only">
+      <a class="btn btn-primary btn-lg" href="demo/" data-evt="demo_open"><svg aria-hidden="true"><use href="#i-play"/></svg>Попробовать в&nbsp;браузере</a>
+      <a class="btn btn-ghost btn-lg" href="#download">Узнать цену</a>
     </div>
-    <div class="hero-shot reveal d2"><img class="shot-real" src="assets/app-main.webp" alt="Главный экран Vidi: три проекции MPR — Axial, Sagittal, Coronal — и объёмная 3D-реконструкция черепа" width="1280" height="790" loading="eager" /></div>
+    <p class="hero-fine fine mac-only">Веб-демо открывается сразу, без установки и&nbsp;регистрации. Полная версия&nbsp;— приложение для&nbsp;Mac на&nbsp;Apple Silicon с&nbsp;macOS&nbsp;14 или новее.</p>
+
+    <div class="hero-cta touch-only">
+      <a class="btn btn-primary btn-lg" href="demo/" data-evt="demo_open_mobile"><svg aria-hidden="true"><use href="#i-play"/></svg>Попробовать в&nbsp;браузере</a>
+      <a class="btn btn-ghost btn-lg" href="https://t.me/vidivieverbot" data-evt="tg_mobile"><svg aria-hidden="true"><use href="#i-tg"/></svg>Получить ссылку для Mac</a>
+    </div>
+    <p class="hero-fine fine touch-only"><svg aria-hidden="true"><use href="#i-phone"/></svg><span>Веб-демо работает и&nbsp;на&nbsp;телефоне. Сам Vidi&nbsp;— приложение для&nbsp;Mac: ссылка на&nbsp;скачивание есть в&nbsp;Telegram-боте.</span></p>
+
+    <!-- Сцена: пустое окно → архив перетаскивается → поиск → панели проявляются по очереди -->
+    <div class="stage" id="stage">
+      <div class="window">
+        <img class="shot" src="assets/app-main.webp" srcset="assets/app-main-800.webp 800w, assets/app-main-1100.webp 1100w, assets/app-main.webp 1600w" sizes="(max-width: 720px) calc(100vw - 40px), (max-width: 1200px) calc(100vw - 80px), 1120px" alt="Окно Vidi с открытым КЛКТ: проекции Axial, Sagittal, Coronal и 3D-реконструкция" width="1600" height="965" fetchpriority="high" />
+        <div class="win-content" aria-hidden="true">
+          <span class="pane-hl axial"></span><span class="pane-hl sagittal"></span><span class="pane-hl coronal"></span><span class="pane-hl vol"></span>
+        </div>
+        <div class="drop win-content" aria-hidden="true">
+          <span class="cover axial"></span><span class="cover sagittal"></span><span class="cover coronal"></span><span class="cover vol"></span>
+          <div class="empty">
+            <span class="empty-icon"><svg><use href="#i-drop"/></svg></span>
+            <h3>Перетащите архив или папку</h3>
+            <p>ZIP, RAR, папка DICOM или .dcm</p>
+          </div>
+          <div class="file-card glass sm">
+            <svg class="zip" viewBox="0 0 40 48" fill="none"><path d="M6 2h20l12 12v28a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4z" fill="#1B212C" stroke="rgba(255,255,255,.14)"/><path d="M26 2v8a4 4 0 0 0 4 4h8" stroke="rgba(255,255,255,.14)"/><path d="M17 7h3M17 12h3M17 17h3M17 22h3" stroke="#93A0B4" stroke-width="1.6" stroke-linecap="round"/><rect x="14.5" y="26" width="8" height="6.5" rx="1.5" stroke="#93A0B4" stroke-width="1.6"/><text x="20" y="42.5" text-anchor="middle" font-size="7" font-weight="500" fill="#DCE8FF" font-family="JetBrains Mono, monospace">ZIP</text></svg>
+            <div><b>КЛКТ_из_клиники.zip</b><span>внутри ещё RAR</span></div>
+          </div>
+          <svg class="cursor" viewBox="0 0 20 26"><path d="M2 2v19l5.2-4.6 3.4 7.4 3.4-1.5-3.3-7.2H18L2 2z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          <div class="scan-status">
+            <svg class="rings" viewBox="0 0 80 80" fill="none" stroke-width="2">
+              <ellipse class="r1" cx="40" cy="40" rx="34" ry="11" stroke="#78D2FF"/>
+              <rect class="r2" x="28" y="8" width="24" height="64" rx="5" stroke="#FFB46E" transform="rotate(20 40 40)"/>
+              <rect class="r3" x="16" y="16" width="48" height="48" rx="7" stroke="#96FFC8" transform="rotate(-18 40 40)"/>
+              <circle cx="40" cy="40" r="3.5" fill="#fff" stroke="none"/>
+            </svg>
+            <div class="pills">
+              <span class="status-pill s-find"><span class="dot busy"></span>Поиск исследования в&nbsp;архиве…</span>
+              <span class="status-pill s-found"><span class="dot good"></span>Исследование найдено · MPR + 3D</span>
+            </div>
+          </div>
+        </div>
+        <button class="chip-float replay" type="button" data-replay><svg aria-hidden="true"><use href="#i-replay"/></svg>Показать ещё раз</button>
+      </div>
+      <div class="planes" role="group" aria-label="Подсветить проекцию на скриншоте">
+        <button type="button" class="plane-chip" data-pane="axial" aria-pressed="false"><span class="dot axial"></span>Axial</button>
+        <button type="button" class="plane-chip" data-pane="sagittal" aria-pressed="false"><span class="dot sagittal"></span>Sagittal</button>
+        <button type="button" class="plane-chip" data-pane="coronal" aria-pressed="false"><span class="dot coronal"></span>Coronal</button>
+        <button type="button" class="plane-chip" data-pane="vol" aria-pressed="false"><span class="dot neutral"></span>3D</button>
+      </div>
+    </div>
   </div>
 </section>
 
-<!-- ===== Why Vidi exists ===== -->
-<section class="section-tight" id="why">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <span class="eyebrow">Почему появился Vidi</span>
-      <h2>Vidi создан специально для&nbsp;macOS</h2>
-      <p class="lead">Стоматологу с Mac до сих пор приходилось идти на компромиссы. Vidi их убирает.</p>
-    </div>
-    <div class="compare">
-      <div class="glass cmp them reveal">
-        <div class="cmp-h">Сегодня на Mac приходится</div>
-        <ul>
-          <li><svg><use href="#i-x"/></svg>Запускать Windows через Parallels</li>
-          <li><svg><use href="#i-x"/></svg>Держать второй ноутбук</li>
-          <li><svg><use href="#i-x"/></svg>Использовать медленные веб-просмотрщики</li>
-          <li><svg><use href="#i-x"/></svg>Ждать загрузки исследований</li>
-        </ul>
-      </div>
-      <div class="glass cmp us reveal d1">
-        <div class="cmp-h">С Vidi</div>
-        <ul>
-          <li><svg><use href="#i-check"/></svg>Нативное приложение для macOS</li>
-          <li><svg><use href="#i-check"/></svg>Быстрая работа</li>
-          <li><svg><use href="#i-check"/></svg>Работает без интернета*</li>
-          <li><svg><use href="#i-check"/></svg>Создан для стоматологии</li>
-        </ul>
-      </div>
-    </div>
-    <p class="fine reveal" style="margin-top:18px">* Подписка проверяется онлайн раз в несколько дней; между проверками Vidi работает офлайн.</p>
-  </div>
-</section>
-
-<!-- ===== Steps ===== -->
-<section class="section-tight" id="start">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <span class="eyebrow">Как начать</span>
-      <h2>Три шага до первого снимка</h2>
-      <p class="lead">От установки до открытого исследования — пара минут.</p>
-    </div>
-    <div class="steps">
-      <div class="glass step reveal"><div class="num">01</div><svg class="ic"><use href="#i-apple"/></svg><h3>Установка</h3><p>Скачайте и установите приложение Vidi на свой Mac. В телеграм-боте есть подробная инструкция.</p></div>
-      <div class="glass step reveal d1"><div class="num">02</div><svg class="ic"><use href="#i-tg"/></svg><h3>Подписка</h3><p>Активируйте подписку за минуту через Telegram.</p></div>
-      <div class="glass step reveal d2"><div class="num">03</div><svg class="ic"><use href="#i-folder"/></svg><h3>Первый снимок</h3><p>Получили архив от пациента? Просто откройте его в Vidi.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== Features ===== -->
-<section class="section-pad" id="features">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <span class="eyebrow">Возможности</span>
-      <h2>Всё для работы с КЛКТ — в одном окне</h2>
-      <p class="lead">От классического MPR до планирования имплантации с контролем безопасного расстояния до канала.</p>
-    </div>
-
-    <!-- F1 -->
-    <div class="feature reveal">
-      <div class="f-text">
-        <svg class="f-ic"><use href="#i-layers"/></svg>
-        <h3>Три проекции и объёмный 3D</h3>
-        <p class="lead">Синхронный просмотр срезов в аксиальной, сагиттальной и корональной проекциях (MPR) — перекрестие связывает все окна. Четвертое окно — 3D рендер черепа c различными масками.</p>
-        <ul class="f-points">
-          <li><svg><use href="#i-check"/></svg>Классический MPR-режим для комфортной работы</li>
-          <li><svg><use href="#i-check"/></svg>Рассматривайте детали благодаря 3D-визуализации в дополнительном окне</li>
-          <li><svg><use href="#i-check"/></svg>Стороны подписаны — R/L, верх/низ. Всегда чёткая ориентация</li>
-        </ul>
-      </div>
-      <div class="f-media reveal d1"><img class="shot-real" src="assets/app-main.webp" alt="Три синхронных проекции MPR и объёмная 3D-реконструкция в Vidi" width="1280" height="790" loading="lazy" /></div>
-    </div>
-
-    <!-- F2 -->
-    <div class="feature flip reveal">
-      <div class="f-text">
-        <svg class="f-ic" style="color:var(--bone)"><use href="#i-wave"/></svg>
-        <h3>Панорама прямо из КЛКТ</h3>
-        <p class="lead">Панорама (как ОПТГ) строится вдоль зубной дуги: программа сама ведёт кривую по зубному ряду. Привычный ОПТГ — но из данных КЛКТ.</p>
-      </div>
-      <div class="f-media reveal d1"><img class="shot-real" src="assets/panorama.webp" alt="Панорамная реконструкция (ОПТГ-подобный снимок) вдоль зубной дуги из КЛКТ в Vidi" width="1280" height="790" loading="lazy" /></div>
-    </div>
-
-    <!-- F3 — killer feature -->
-    <div class="feature reveal">
-      <div class="f-text">
-        <svg class="f-ic" style="color:var(--coronal)"><use href="#i-shield"/></svg>
-        <h3>Разметка канала и «безопасный имплант»</h3>
-        <p class="lead">Нижнечелюстной канал размечается в пару кликов — авто-трассировка сама проведёт линию. Имплант ставится из библиотеки размеров, расстояние до стенки канала сразу видно по цветовой шкале.</p>
-        <ul class="f-points">
-          <li><svg><use href="#i-check"/></svg>Авто-трассировка канала + ручная коррекция</li>
-          <li><svg><use href="#i-check"/></svg>Библиотека имплантов Ø3.5–4.5 × 8–14 мм с реалистичной 3D-моделью</li>
-          <li><svg><use href="#i-check"/></svg>Индикатор близости к каналу цветом: <b style="color:var(--axial)">безопасно</b> / <b style="color:var(--amber)">близко</b> / <b style="color:var(--danger)">опасно</b></li>
-        </ul>
-      </div>
-      <div class="f-media reveal d1"><img class="shot-real" src="assets/implant-safety.webp" alt="Разметка нижнечелюстного канала и установленный имплант с индикатором близости к каналу в Vidi" width="1280" height="790" loading="lazy" /></div>
-    </div>
-
-    <!-- F4 -->
-    <div class="feature flip reveal">
-      <div class="f-text">
-        <svg class="f-ic"><use href="#i-file"/></svg>
-        <h3>Отчёты в PDF — в один клик</h3>
-        <p class="lead">Готовый отчёт для пациента или коллеги: с данными пациента, тремя проекциями, панорамой и таблицами измерений.</p>
-        <ul class="f-points">
-          <li><svg><use href="#i-check"/></svg>На выбор: отчёт по конкретному зубу (серия срезов) или по выбранной проекции</li>
-          <li><svg><use href="#i-check"/></svg>Таблицы измерений, имплантов и разметки канала</li>
-        </ul>
-      </div>
-      <div class="f-media reveal d1"><img class="shot-real" src="assets/report.webp" alt="Генерация PDF-отчёта по КЛКТ-исследованию в Vidi: срезы по зубу и реквизиты" width="1280" height="772" loading="lazy" /></div>
-    </div>
-
-    <!-- F5 -->
-    <div class="feature reveal">
-      <div class="f-text">
-        <svg class="f-ic"><use href="#i-folder"/></svg>
-        <h3>Открывает почти любой КТ-снимок</h3>
-        <p class="lead">Перетащите папку или архив в окно — исследование откроется само. Вложенные архивы распакуются автоматически.</p>
-        <ul class="f-points">
-          <li><svg><use href="#i-check"/></svg>Читает сжатые DICOM (JPEG 2000, JPEG Lossless) — без повторного сжатия, в исходном качестве</li>
-          <li><svg><use href="#i-lock"/></svg>Локально и приватно: данные пациента не уходят в облако</li>
-        </ul>
-      </div>
-      <div class="f-media">
-        <div class="glass import-vis">
-          <span class="fchip big"><svg><use href="#i-folder"/></svg>Папка DICOM</span>
-          <span class="fchip">ZIP</span>
-          <span class="fchip">RAR</span>
-          <span class="fchip"><svg><use href="#i-file"/></svg>.dcm</span>
-          <span class="fchip">Sidexis</span>
-          <span class="fchip">Sirona</span>
-          <span class="fchip">Galileos</span>
+<!-- ================= АРХИВ ================= -->
+<section class="section" id="archive">
+  <div class="wrap split">
+    <div>
+      <div class="eyebrow">Архивы</div>
+      <h2>Архив из&nbsp;клиники открывается одним движением</h2>
+      <p class="lede">Клиника присылает ZIP или RAR: служебные папки, сотни файлов без расширений, иногда архив внутри архива. Распаковывать и&nbsp;искать нужную папку не&nbsp;нужно.</p>
+      <div class="ways">
+        <div class="way card">
+          <h3>Обычно на&nbsp;Mac</h3>
+          <ol>
+            <li>Распаковать архив, иногда дважды</li>
+            <li>Найти папку с&nbsp;DICOM среди служебных</li>
+            <li>Запустить Windows через Parallels или сесть за&nbsp;другой компьютер</li>
+            <li>Открыть в&nbsp;программе производителя томографа</li>
+          </ol>
+        </div>
+        <div class="way card card-accent">
+          <h3>В&nbsp;Vidi</h3>
+          <ol>
+            <li>Перетащить архив в&nbsp;окно</li>
+          </ol>
+          <p>Вложенные архивы распакуются сами, исследование откроется в&nbsp;исходном качестве.</p>
         </div>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- ===== Formats ===== -->
-<section class="section-tight" id="formats">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <span class="eyebrow">Форматы</span>
-      <h2>Поддержка всех известных форматов</h2>
-      <p class="lead">Открывает экспорты аппаратов всех основных производителей — без конвертации и подготовки.</p>
-    </div>
-    <div class="glass reveal" style="overflow:hidden">
-      <table class="fmt-table">
-        <thead><tr><th>Формат</th><th class="st">Статус</th></tr></thead>
-        <tbody>
-          <tr><td class="fmt">Implicit / Explicit VR Little Endian</td><td class="st"><span class="badge-yes"><svg><use href="#i-check"/></svg>Да</span></td></tr>
-          <tr><td class="fmt">Explicit VR Big Endian</td><td class="st"><span class="badge-yes"><svg><use href="#i-check"/></svg>Да</span></td></tr>
-          <tr><td class="fmt">JPEG Lossless (.57 / .70)</td><td class="st"><span class="badge-yes"><svg><use href="#i-check"/></svg>Да</span></td></tr>
-          <tr><td class="fmt">JPEG 2000 Lossless / Lossy (.90 / .91), 16-бит</td><td class="st"><span class="badge-yes"><svg><use href="#i-check"/></svg>Да</span></td></tr>
-          <tr><td class="fmt">Источник: папка / ZIP / RAR / отдельный файл</td><td class="st"><span class="badge-yes"><svg><use href="#i-check"/></svg>Да</span></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="fmt-note reveal"><svg><use href="#i-alert"/></svg>Неподдерживаемые форматы открываются с понятной подсказкой — достаточно попросить в клинике несжатый DICOM.</p>
-  </div>
-</section>
-
-<!-- ===== Requirements ===== -->
-<section class="section-tight" id="requirements">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <span class="eyebrow">Системные требования</span>
-      <h2>Что нужно для запуска</h2>
-    </div>
-    <div class="reqs">
-      <div class="glass req reveal"><svg class="ic"><use href="#i-mac"/></svg><h3>macOS 14.0 или новее</h3><p>Современная версия системы — для нативной графики и стабильной работы.</p></div>
-      <div class="glass req reveal d1"><svg class="ic"><use href="#i-cpu"/></svg><h3>Apple Silicon (M1 и новее)</h3><p>Только чипы M-серии. Версии под Intel-Mac и Windows нет.</p></div>
-      <div class="glass req reveal d2"><svg class="ic"><use href="#i-ram"/></svg><h3>16 ГБ ОЗУ — рекомендуется</h3><p>Для крупных объёмов и нескольких открытых исследований одновременно.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== Compare ===== -->
-<section class="section-tight" id="compare">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <span class="eyebrow">Почему Vidi</span>
-      <h2>Лёгкая альтернатива тяжёлому софту</h2>
-      <p class="lead">Снимки приходят в архивах от разных клиник — а смотреть их хочется быстро и на Mac. Для этого есть Vidi.</p>
-    </div>
-    <div class="compare">
-      <div class="glass cmp them reveal">
-        <div class="cmp-h">Фирменный софт производителя</div>
-        <ul>
-          <li><svg><use href="#i-x"/></svg>Тяжёлый, часто привязан к Windows</li>
-          <li><svg><use href="#i-x"/></svg>Завязан на конкретный аппарат</li>
-          <li><svg><use href="#i-x"/></svg>Сложная установка и настройка</li>
-        </ul>
-      </div>
-      <div class="glass cmp us reveal d1">
-        <div class="cmp-h">Vidi на Mac</div>
-        <ul>
-          <li><svg><use href="#i-check"/></svg>Лёгкое нативное приложение для macOS</li>
-          <li><svg><use href="#i-check"/></svg>Открывает снимки из любой клиники</li>
-          <li><svg><use href="#i-check"/></svg>Не нужно искать нужную папку в архиве — открывает сразу</li>
-        </ul>
+    <div class="tree device" id="tree" role="img" aria-label="Пример архива: Vidi находит папку исследования внутри вложенного архива">
+      <div class="device-bar" aria-hidden="true"><span class="tl r"></span><span class="tl y"></span><span class="tl g"></span><span class="device-title">КЛКТ_из_клиники.zip</span></div>
+      <ul class="tree-list" aria-hidden="true">
+        <li style="--i:0"><svg><use href="#i-zip"/></svg>КЛКТ_из_клиники.zip</li>
+        <li class="d1" style="--i:1"><svg><use href="#i-folder"/></svg>Viewer<span class="cap">просмотрщик .exe</span></li>
+        <li class="d1" style="--i:2"><svg><use href="#i-file"/></svg>autorun.inf</li>
+        <li class="d1" style="--i:3"><svg><use href="#i-zip"/></svg>export.rar</li>
+        <li class="d2" style="--i:4"><svg><use href="#i-file"/></svg>DICOMDIR</li>
+        <li class="d2 study" style="--i:5"><svg><use href="#i-folder"/></svg>S0001<span class="cap">сотни файлов без расширения</span></li>
+        <li class="d3" style="--i:6"><svg><use href="#i-file"/></svg>I0000001</li>
+        <li class="d3" style="--i:7"><svg><use href="#i-file"/></svg>I0000002</li>
+        <li class="d3" style="--i:8"><svg><use href="#i-file"/></svg>…</li>
+      </ul>
+      <span class="tree-sweep" aria-hidden="true"></span>
+      <div class="device-foot" aria-hidden="true">
+        <span class="readout"><span class="dot good"></span>Исследование найдено и&nbsp;открыто<span class="cap">MPR + 3D</span></span>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== Download / subscription ===== -->
-<section class="section-pad" id="download">
+<!-- ================= ВОЗМОЖНОСТИ ================= -->
+<section class="section" id="features">
   <div class="wrap">
-    <div class="glass download-card reveal">
-      <div class="dl-grid">
-        <div class="dl-main">
-          <span class="eyebrow">Скачать</span>
-          <h2 style="margin-top:14px">DICOM Viewer для Mac</h2>
-          <p class="lead">Вход в приложение осуществляется после создания аккаунта и оплаты подписки в Telegram-боте.</p>
-          <div class="dl-cta">
-            <a class="btn btn-primary btn-lg" href="https://storage.yandexcloud.net/videviewergmd/Vidi-1.3.dmg" data-evt="download"><svg><use href="#i-apple"/></svg>Скачать для Mac</a>
-            <a class="btn btn-tg btn-lg" href="https://t.me/vidivieverbot" data-evt="subscribe"><svg><use href="#i-tg"/></svg>Оформить подписку</a>
-          </div>
-          <div class="dl-meta">
-            <div>Требования<b>Компьютер Apple на чипах M-серии · macOS 14.0+</b></div>
-            <div>Стоимость<b>599 ₽ / месяц</b></div>
+    <div class="section-head">
+      <div class="eyebrow">Возможности</div>
+      <h2>Всё для работы с&nbsp;КЛКТ&nbsp;— в&nbsp;одном окне</h2>
+      <p class="lede">От классического MPR до&nbsp;планирования имплантации с&nbsp;контролем расстояния до&nbsp;канала.</p>
+    </div>
+    <div class="story">
+      <div class="story-steps">
+        <article class="story-step on" data-shot="0">
+          <h3>Три проекции и&nbsp;объёмный 3D</h3>
+          <p>Axial, Sagittal и&nbsp;Coronal синхронны&nbsp;— перекрестие связывает все окна. Четвёртое окно&nbsp;— 3D-реконструкция с&nbsp;разными масками.</p>
+          <ul>
+            <li>Классический MPR для привычной работы</li>
+            <li>Стороны подписаны&nbsp;— R/L, верх/низ, ориентация всегда понятна</li>
+          </ul>
+          <img class="inline-shot shot-real" src="assets/three-planes.webp" srcset="assets/three-planes-800.webp 800w, assets/three-planes-1100.webp 1100w, assets/three-planes.webp 1600w" sizes="(max-width: 720px) calc(100vw - 40px), calc(100vw - 80px)" alt="Три синхронные проекции MPR и 3D-реконструкция в Vidi" width="1600" height="965" loading="lazy" decoding="async" />
+        </article>
+        <article class="story-step" data-shot="1">
+          <h3>Панорама прямо из&nbsp;КЛКТ</h3>
+          <p>Панорама, как ОПТГ, строится вдоль зубной дуги: программа сама ведёт кривую по&nbsp;зубному ряду.</p>
+          <ul>
+            <li>Привычный вид снимка&nbsp;— но&nbsp;из&nbsp;данных КЛКТ</li>
+          </ul>
+          <img class="inline-shot shot-real" src="assets/panorama.webp" srcset="assets/panorama-800.webp 800w, assets/panorama-1100.webp 1100w, assets/panorama.webp 1600w" sizes="(max-width: 720px) calc(100vw - 40px), calc(100vw - 80px)" alt="Панорамная реконструкция вдоль зубной дуги из КЛКТ в Vidi" width="1600" height="965" loading="lazy" decoding="async" />
+        </article>
+        <article class="story-step" data-shot="2">
+          <h3>Разметка канала и&nbsp;«безопасный имплант»</h3>
+          <p>Нижнечелюстной канал размечается в&nbsp;пару кликов&nbsp;— авто-трассировка сама проведёт линию. Расстояние от&nbsp;импланта до&nbsp;стенки канала видно сразу.</p>
+          <ul>
+            <li>Авто-трассировка канала и&nbsp;ручная коррекция</li>
+            <li>Библиотека имплантов Ø3.5–4.5 × 8–14&nbsp;мм с&nbsp;3D-моделью</li>
+          </ul>
+          <img class="inline-shot shot-real" src="assets/implant-safety.webp" srcset="assets/implant-safety-800.webp 800w, assets/implant-safety-1100.webp 1100w, assets/implant-safety.webp 1600w" sizes="(max-width: 720px) calc(100vw - 40px), calc(100vw - 80px)" alt="Размеченный нижнечелюстной канал и установленный имплант с расстоянием до канала в Vidi" width="1600" height="965" loading="lazy" decoding="async" />
+        </article>
+        <article class="story-step" data-shot="3">
+          <h3>Отчёт в&nbsp;PDF в&nbsp;один клик</h3>
+          <p>Готовый отчёт для пациента или коллеги: данные пациента, проекции, панорама и&nbsp;таблицы измерений.</p>
+          <ul>
+            <li>Отчёт по&nbsp;конкретному зубу (серия срезов) или по&nbsp;выбранной проекции</li>
+            <li>Таблицы измерений, имплантов и&nbsp;разметки канала</li>
+          </ul>
+          <img class="inline-shot shot-real" src="assets/report.webp" srcset="assets/report-800.webp 800w, assets/report-1100.webp 1100w, assets/report.webp 1600w" sizes="(max-width: 720px) calc(100vw - 40px), calc(100vw - 80px)" alt="Генерация PDF-отчёта по КЛКТ-исследованию в Vidi" width="1600" height="965" loading="lazy" decoding="async" />
+        </article>
+      </div>
+      <div class="story-media" aria-hidden="true">
+        <div class="story-sticky">
+          <div class="story-frame" id="story-frame">
+            <img class="on" src="assets/three-planes.webp" srcset="assets/three-planes-1100.webp 1100w, assets/three-planes.webp 1600w" sizes="640px" alt="" width="1600" height="965" loading="lazy" decoding="async" />
+            <img src="assets/panorama.webp" srcset="assets/panorama-1100.webp 1100w, assets/panorama.webp 1600w" sizes="640px" alt="" width="1600" height="965" loading="lazy" decoding="async" />
+            <img src="assets/implant-safety.webp" srcset="assets/implant-safety-1100.webp 1100w, assets/implant-safety.webp 1600w" sizes="640px" alt="" width="1600" height="965" loading="lazy" decoding="async" />
+            <img src="assets/report.webp" srcset="assets/report-1100.webp 1100w, assets/report.webp 1600w" sizes="640px" alt="" width="1600" height="965" loading="lazy" decoding="async" />
           </div>
         </div>
-        <aside class="dl-demo">
-          <img class="dl-demo-ic" src="assets/icon.png" alt="Vidi" width="56" height="56" />
-          <div class="dl-demo-t">Демо-версия Vidi</div>
-          <p class="dl-demo-s">Все функции приложения — на демонстрационном КЛКТ-исследовании, бесплатно.</p>
-          <a class="btn btn-primary" href="https://storage.yandexcloud.net/videviewergmd/%D0%94%D0%B5%D0%BC%D0%BE%20%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F%20%D0%BF%D1%80%D0%B8%D0%BB%D0%BE%D0%B6%D0%B5%D0%BD%D0%B8%D1%8F.dmg" data-evt="download"><svg><use href="#i-arrow-down"/></svg>Скачать демо</a>
-          <span class="dl-demo-meta mono">.dmg · macOS 14.0+</span>
-        </aside>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== Reviews ===== -->
-<section class="section-tight" id="reviews">
+<!-- ================= КАНАЛ: интерактив ================= -->
+<section class="section" id="canal">
+  <div class="wrap split">
+    <div>
+      <div class="eyebrow">Разметка канала</div>
+      <h2>Расстояние до&nbsp;канала видно сразу</h2>
+      <p class="lede">Имплант ставится на&nbsp;размеченный канал, и&nbsp;Vidi показывает запас до&nbsp;его стенки. Цвет точки решает порог, значение остаётся нейтральным.</p>
+      <ul class="readouts">
+        <li class="readout"><span class="dot good"></span>≥ 2.0&nbsp;мм<span class="badge badge-good">Безопасно</span></li>
+        <li class="readout"><span class="dot warn"></span>1.0–2.0&nbsp;мм<span class="badge badge-warn">Близко</span></li>
+        <li class="readout"><span class="dot danger"></span>&lt; 1.0&nbsp;мм<span class="badge badge-danger">Опасно</span></li>
+      </ul>
+    </div>
+    <div class="demo device" id="canal-demo" data-state="good">
+      <div class="device-bar" aria-hidden="true"><span class="tl r"></span><span class="tl y"></span><span class="tl g"></span><span class="device-title">Схема · поперечный срез</span></div>
+      <div class="viewport">
+        <svg viewBox="0 0 640 400" role="img" aria-labelledby="demo-title">
+          <title id="demo-title">Схема: имплант над нижнечелюстным каналом на поперечном срезе</title>
+          <defs>
+            <linearGradient id="g-cort" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D2D5DA"/><stop offset="1" stop-color="#9A9EA6"/></linearGradient>
+            <radialGradient id="g-cancel" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="#565A62"/><stop offset="1" stop-color="#31353C"/></radialGradient>
+            <pattern id="p-thread" width="40" height="11" patternUnits="userSpaceOnUse"><path d="M3 5.5h34" stroke="rgba(242,193,78,.55)" stroke-width="1.6" stroke-linecap="round"/></pattern>
+          </defs>
+          <path d="M252 62C248 30 392 30 388 62C420 150 452 250 442 330C434 372 400 386 320 386C240 386 206 372 198 330C188 250 220 150 252 62Z" fill="url(#g-cort)"/>
+          <path d="M270 80C272 56 368 56 370 80C398 162 426 252 420 322C414 354 386 366 320 366C254 366 226 354 220 322C214 252 242 162 270 80Z" fill="url(#g-cancel)"/>
+          <circle cx="320" cy="300" r="21" fill="#E8873A"/>
+          <path d="M342 306 L470 332" stroke="rgba(147,160,180,.45)" stroke-width="1.2"/>
+          <text x="478" y="338" fill="#93A0B4" font-size="18">канал</text>
+          <g>
+            <rect id="implant-body" x="302" y="40" width="36" height="170" rx="9" fill="rgba(242,193,78,.14)" stroke="#F2C14E" stroke-width="1.6"/>
+            <rect id="implant-thread" x="302" y="52" width="36" height="150" fill="url(#p-thread)"/>
+            <rect x="298" y="34" width="44" height="10" rx="3" fill="#F2C14E"/>
+          </g>
+          <path d="M342 39 L470 70" stroke="rgba(147,160,180,.45)" stroke-width="1.2"/>
+          <text x="478" y="76" fill="#93A0B4" font-size="18">имплант</text>
+          <line id="m-line" x1="286" y1="210" x2="286" y2="279" stroke="#F2C14E" stroke-width="1.6" stroke-dasharray="4 4"/>
+          <line id="m-top" x1="279" y1="210" x2="293" y2="210" stroke="#F2C14E" stroke-width="1.6"/>
+          <line x1="279" y1="279" x2="293" y2="279" stroke="#F2C14E" stroke-width="1.6"/>
+          <text id="m-text" x="274" y="250" text-anchor="end" fill="#F2C14E" font-size="18" font-weight="500" stroke="#000" stroke-width="6" stroke-linejoin="round" paint-order="stroke">2.9 мм</text>
+        </svg>
+      </div>
+      <div class="device-foot">
+        <div class="demo-read" aria-hidden="true">
+          <span class="readout"><span class="dot good"></span><span id="demo-val">2.9</span><span class="unit">мм</span></span>
+          <span class="badge badge-good" id="demo-state">Безопасно</span>
+        </div>
+        <label class="field-label" for="depth"><span>Глубина установки</span><span>потяните</span></label>
+        <input id="depth" type="range" min="0" max="100" value="30" step="1" aria-valuetext="До канала 2.9 мм — безопасно" />
+        <p class="fine">Схема для иллюстрации шкалы. В&nbsp;приложении расстояние считается по&nbsp;разметке канала на&nbsp;вашем КЛКТ.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ФОРМАТЫ И ТРЕБОВАНИЯ ================= -->
+<section class="section" id="formats">
   <div class="wrap">
-    <div class="section-head reveal">
-      <span class="eyebrow">Отзывы</span>
+    <div class="section-head">
+      <div class="eyebrow">Форматы</div>
+      <h2>Что откроет Vidi и&nbsp;где он работает</h2>
+      <p class="lede">Экспорты аппаратов основных производителей открываются без конвертации и&nbsp;подготовки.</p>
+    </div>
+    <div class="specs">
+      <div class="card">
+        <h3>Форматы</h3>
+        <ul class="scale">
+          <li><span class="data">Implicit / Explicit VR Little Endian</span><span class="badge badge-good">Да</span></li>
+          <li><span class="data">Explicit VR Big Endian</span><span class="badge badge-good">Да</span></li>
+          <li><span class="data">JPEG Lossless (.57 / .70)</span><span class="badge badge-good">Да</span></li>
+          <li><span class="data">JPEG 2000 Lossless / Lossy (.90 / .91), 16&nbsp;бит</span><span class="badge badge-good">Да</span></li>
+        </ul>
+        <div class="chips" aria-label="Источники">
+          <span class="chip">Папка DICOM</span><span class="chip">ZIP</span><span class="chip">RAR</span><span class="chip">.dcm</span><span class="chip">Sidexis</span><span class="chip">Sirona</span><span class="chip">Galileos</span>
+        </div>
+        <p class="note"><svg aria-hidden="true"><use href="#i-info"/></svg><span>Неподдерживаемый формат Vidi покажет с&nbsp;понятной подсказкой&nbsp;— обычно достаточно попросить в&nbsp;клинике несжатый DICOM. Подробнее&nbsp;— в&nbsp;гайде <a href="/kak-otkryt-klkt-na-mac/">«Как открыть КЛКТ на&nbsp;Mac»</a>.</span></p>
+      </div>
+      <div class="card">
+        <h3>Требования</h3>
+        <ul class="scale">
+          <li>macOS<b>14.0 или новее</b></li>
+          <li>Процессор<b>Apple Silicon, M1 и&nbsp;новее</b></li>
+          <li>Память<b>16&nbsp;ГБ&nbsp;— рекомендуется</b></li>
+          <li>Интернет<b>раз в&nbsp;несколько дней</b></li>
+        </ul>
+        <p class="note"><svg aria-hidden="true"><use href="#i-info"/></svg><span>Версий под Intel-Mac и&nbsp;Windows нет. Снимки обрабатываются локально; интернет нужен только для проверки подписки.</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ЦЕНА И СКАЧИВАНИЕ ================= -->
+<section class="section" id="download">
+  <div class="wrap">
+    <div class="section-head center">
+      <div class="eyebrow">Цена</div>
+      <h2>Начните с&nbsp;бесплатного демо</h2>
+      <p class="lede">Веб-демо показывает, как Vidi работает с&nbsp;КЛКТ, прямо в&nbsp;браузере. Свои снимки, панорама, канал и&nbsp;импланты&nbsp;— в&nbsp;приложении для&nbsp;Mac по&nbsp;подписке.</p>
+    </div>
+    <div class="plans">
+      <div class="plan card card-accent">
+        <div class="cap">Шаг 1</div>
+        <h3>Веб-демо</h3>
+        <div class="price">0&nbsp;₽</div>
+        <p>Демонстрационное КЛКТ прямо в&nbsp;браузере&nbsp;— без установки и&nbsp;регистрации.</p>
+        <ul>
+          <li><svg aria-hidden="true"><use href="#i-check"/></svg>Три проекции с&nbsp;наклоном осей, 3D, линейка и&nbsp;угол</li>
+          <li class="muted"><svg aria-hidden="true"><use href="#i-lock"/></svg>Панорама, канал, импланты и&nbsp;PDF&nbsp;— в&nbsp;приложении</li>
+        </ul>
+        <div class="plan-cta">
+          <a class="btn btn-primary btn-lg" href="demo/" data-evt="demo_open"><svg aria-hidden="true"><use href="#i-play"/></svg>Открыть демо</a>
+          <span class="cap">Safari, Chrome или Firefox · на&nbsp;Mac и&nbsp;телефоне</span>
+        </div>
+      </div>
+      <div class="plan card">
+        <div class="cap">Шаг 2</div>
+        <h3>Подписка</h3>
+        <div class="price">599&nbsp;₽<small>/ мес</small></div>
+        <p>Полный доступ: открывайте любые свои снимки. Vidi 1.3.</p>
+        <ul>
+          <li><svg aria-hidden="true"><use href="#i-check"/></svg>Оформление и&nbsp;оплата в&nbsp;Telegram-боте за&nbsp;минуту</li>
+          <li><svg aria-hidden="true"><use href="#i-check"/></svg>Одна подписка&nbsp;— один Mac, привязку сбросит поддержка</li>
+          <li><svg aria-hidden="true"><use href="#i-check"/></svg>Отмена в&nbsp;боте, доступ сохраняется до&nbsp;конца периода</li>
+        </ul>
+        <div class="plan-cta">
+          <a class="btn btn-ghost btn-lg" href="https://t.me/vidivieverbot" data-evt="subscribe"><svg aria-hidden="true"><use href="#i-tg"/></svg>Оформить подписку</a>
+          <a class="plan-link mac-only" href="https://storage.yandexcloud.net/videviewergmd/Vidi-1.3.dmg" data-evt="download">Скачать Vidi 1.3 (46&nbsp;МБ)</a>
+          <p class="touch-note touch-only">Подписку можно оформить с&nbsp;телефона, а&nbsp;приложение установить позже на&nbsp;Mac&nbsp;— ссылка останется в&nbsp;боте.</p>
+        </div>
+      </div>
+    </div>
+    <ol class="principles">
+      <li class="principle"><span class="num">01</span><h3>Установите Vidi</h3><p>Скачайте DMG и&nbsp;перенесите приложение в&nbsp;«Программы». Инструкция есть в&nbsp;боте.</p></li>
+      <li class="principle"><span class="num">02</span><h3>Оформите подписку</h3><p>В&nbsp;Telegram-боте: email, код, оплата.</p></li>
+      <li class="principle"><span class="num">03</span><h3>Перетащите архив</h3><p>Исследование откроется в&nbsp;трёх проекциях и&nbsp;3D.</p></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ================= ОТЗЫВЫ ================= -->
+<section class="section" id="reviews">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Отзывы</div>
       <h2>Что говорят врачи</h2>
-      <p class="lead">Реальные отзывы о приложении.</p>
     </div>
     <div class="reviews">
-      <div class="glass review reveal"><p class="quote">«Давно искал замену неудобным приложениям для просмотра КЛКТ-снимков — Vidi решило этот вопрос»</p><div class="who"><span class="av"></span><span class="who-t">Шамиль М. · Хирург · Москва</span></div></div>
-      <div class="glass review reveal d1"><p class="quote">«Благодаря Vidi я могу комфортно составлять планы лечения за своим личным компьютером — я не привязан к клинике»</p><div class="who"><span class="av"></span><span class="who-t">Гайдар К. · Ортопед · Баку</span></div></div>
-      <div class="glass review reveal d2"><p class="quote">«Наконец-то просмотр КТ на Mac стал удобным»</p><div class="who"><span class="av"></span><span class="who-t">Темур Ф. · Хирург · Москва</span></div></div>
-      <div class="glass review reveal d3"><p class="quote">«Хорошее приложение, в лучшую сторону отличается от других приложений просмотра КТ на Mac»</p><div class="who"><span class="av"></span><span class="who-t">Фариз Н. · Ортопед · Москва</span></div></div>
-      <div class="glass review reveal d3"><p class="quote">«Смотрю КТ дома, удобно»</p><div class="who"><span class="av"></span><span class="who-t">Марьяна К. · Терапевт · Москва</span></div></div>
+      <figure class="review card"><blockquote>«Давно искал замену неудобным приложениям для просмотра КЛКТ-снимков&nbsp;— Vidi решило этот вопрос»</blockquote><figcaption><b>Шамиль М.</b>, хирург, Москва</figcaption></figure>
+      <figure class="review card"><blockquote>«Благодаря Vidi я могу комфортно составлять планы лечения за своим личным компьютером&nbsp;— я не привязан к клинике»</blockquote><figcaption><b>Гайдар К.</b>, ортопед, Баку</figcaption></figure>
+      <figure class="review card"><blockquote>«Наконец-то просмотр КТ на Mac стал удобным»</blockquote><figcaption><b>Темур Ф.</b>, хирург, Москва</figcaption></figure>
+      <figure class="review card"><blockquote>«Хорошее приложение, в лучшую сторону отличается от других приложений просмотра КТ на Mac»</blockquote><figcaption><b>Фариз Н.</b>, ортопед, Москва</figcaption></figure>
+      <figure class="review card"><blockquote>«Смотрю КТ дома, удобно»</blockquote><figcaption><b>Марьяна К.</b>, терапевт, Москва</figcaption></figure>
     </div>
   </div>
 </section>
 
-<!-- ===== FAQ ===== -->
-<section class="section-pad" id="faq">
+<!-- ================= FAQ ================= -->
+<section class="section" id="faq">
   <div class="wrap">
-    <div class="section-head reveal" style="text-align:center;margin:0 auto 52px">
-      <span class="eyebrow" style="justify-content:center">FAQ</span>
+    <div class="section-head center">
+      <div class="eyebrow">Вопросы</div>
       <h2>Частые вопросы</h2>
     </div>
-    <div class="faq reveal">
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">Это медицинское изделие?</button>
-        <div class="faq-a"><div class="faq-a-inner">Нет. Vidi — инструмент просмотра и планирования, не сертифицирован для клинической диагностики. Для постановки диагноза предназначено сертифицированное ПО.</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">Откроет ли снимок из моей клиники?</button>
-        <div class="faq-a"><div class="faq-a-inner">Да: папка DICOM, ZIP, RAR или отдельный файл; экспорты Sidexis / Sirona / Galileos и стандартный DICOM. Сжатые JPEG Lossless и JPEG 2000 (16-бит) поддерживаются.</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">Работает на Intel-Mac или Windows?</button>
-        <div class="faq-a"><div class="faq-a-inner">Только Apple Silicon (M-серия), macOS 14.0+. Версии под Windows и Intel-Mac нет.</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">Сколько стоит?</button>
-        <div class="faq-a"><div class="faq-a-inner">Демо бесплатно. Платный доступ — по подписке через Telegram-бот. 1 месяц — 599 рублей.</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">Как оформить подписку и войти в приложение?</button>
-        <div class="faq-a"><div class="faq-a-inner">Подписка оформляется через Telegram-бот. Указываете email (ваш логин), и бот выдаёт код. Затем вы оплачиваете подписку и можете пользоваться приложением.</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">Чем демо отличается от полной версии?</button>
-        <div class="faq-a"><div class="faq-a-inner">В демо доступны все функции, но на одном демонстрационном КЛКТ-исследовании. По подписке открываете собственные снимки без ограничений.</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">Работает ли приложение без интернета?</button>
-        <div class="faq-a"><div class="faq-a-inner">Да. Подписка проверяется онлайн раз в несколько дней, между проверками Vidi полностью работает офлайн.</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">Сколько устройств можно использовать по одной подписке?</button>
-        <div class="faq-a"><div class="faq-a-inner">Одна подписка — одно устройство. Чтобы сменить компьютер, напишите в поддержку (<a href="https://t.me/ter_simon">@ter_simon</a> / <a href="mailto:vidiviewer@yandex.ru">vidiviewer@yandex.ru</a>) — привязку сбросят.</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">Как отменить подписку?</button>
-        <div class="faq-a"><div class="faq-a-inner">В боте есть кнопка «Отменить подписку». Автосписания прекращаются, а доступ сохраняется до конца оплаченного периода.</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">macOS не даёт открыть приложение («не удаётся проверить разработчика»). Что делать?</button>
-        <div class="faq-a"><div class="faq-a-inner">Это стандартное предупреждение macOS. Откройте «Системные настройки → Конфиденциальность и безопасность → Всё равно открыть». Пошаговая инструкция есть внутри DMG и в боте.</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">При попытке зайти приложение пишет, что сервер недоступен. Что делать?</button>
-        <div class="faq-a"><div class="faq-a-inner">Отключите «ускорители интернета» и попробуйте повторить вход.</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">Снимок из моей клиники не открылся — что делать?</button>
-        <div class="faq-a"><div class="faq-a-inner">Напишите нам: <a href="https://t.me/ter_simon">@ter_simon</a> / <a href="mailto:vidiviewer@yandex.ru">vidiviewer@yandex.ru</a>.</div></div>
-      </div>
+    <div class="faq">
+      <details class="faq-item">
+        <summary>Это медицинское изделие?</summary>
+        <div class="faq-a">Нет. Vidi — инструмент просмотра и планирования, не сертифицирован для клинической диагностики. Для постановки диагноза предназначено сертифицированное ПО.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Откроет ли снимок из моей клиники?</summary>
+        <div class="faq-a">Да: папка DICOM, ZIP, RAR или отдельный файл; экспорты Sidexis / Sirona / Galileos и стандартный DICOM. Сжатые JPEG Lossless и JPEG 2000 (16-бит) поддерживаются.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Работает на Intel-Mac или Windows?</summary>
+        <div class="faq-a">Только Apple Silicon (M-серия), macOS 14.0+. Версии под Windows и Intel-Mac нет.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Сколько стоит?</summary>
+        <div class="faq-a">Веб-демо бесплатно. Платный доступ к приложению — по подписке через Telegram-бот. 1 месяц — 599 рублей.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Как оформить подписку и войти в приложение?</summary>
+        <div class="faq-a">Подписка оформляется через Telegram-бот. Указываете email (ваш логин), и бот выдаёт код. Затем вы оплачиваете подписку и можете пользоваться приложением.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Чем демо отличается от полной версии?</summary>
+        <div class="faq-a">Веб-демо работает в браузере на демонстрационном КЛКТ: три проекции с наклоном осей, 3D, линейка, угол, окна и толщина слоя. Панорама, разметка канала, планирование имплантации, PDF-отчёты и свои снимки — в приложении Vidi для Mac по подписке.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Работает ли приложение без интернета?</summary>
+        <div class="faq-a">Да. Подписка проверяется онлайн раз в несколько дней, между проверками Vidi полностью работает офлайн.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Сколько устройств можно использовать по одной подписке?</summary>
+        <div class="faq-a">Одна подписка — одно устройство. Чтобы сменить компьютер, напишите в поддержку (<a href="https://t.me/ter_simon">@ter_simon</a> / <a href="mailto:vidiviewer@yandex.ru">vidiviewer@yandex.ru</a>) — привязку сбросят.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Как отменить подписку?</summary>
+        <div class="faq-a">В боте есть кнопка «Отменить подписку». Автосписания прекращаются, а доступ сохраняется до конца оплаченного периода.</div>
+      </details>
+      <details class="faq-item">
+        <summary>macOS не даёт открыть приложение («не удаётся проверить разработчика»). Что делать?</summary>
+        <div class="faq-a">Это стандартное предупреждение macOS. Откройте «Системные настройки → Конфиденциальность и безопасность → Всё равно открыть». Пошаговая инструкция есть внутри DMG и в боте.</div>
+      </details>
+      <details class="faq-item">
+        <summary>При попытке зайти приложение пишет, что сервер недоступен. Что делать?</summary>
+        <div class="faq-a">Отключите «ускорители интернета» и попробуйте повторить вход.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Снимок из моей клиники не открылся — что делать?</summary>
+        <div class="faq-a">Напишите нам: <a href="https://t.me/ter_simon">@ter_simon</a> / <a href="mailto:vidiviewer@yandex.ru">vidiviewer@yandex.ru</a>.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ФИНАЛ ================= -->
+<section class="section final">
+  <div class="wrap">
+    <img class="final-icon" src="assets/icon.png" alt="" width="96" height="96" loading="lazy" />
+    <h2>Смотреть КЛКТ на&nbsp;Mac&nbsp;— теперь это реально.</h2>
+    <p class="lede">Веб-демо открывается прямо в&nbsp;браузере: три проекции, 3D и&nbsp;измерения на&nbsp;демонстрационном исследовании.</p>
+    <div class="hero-cta">
+      <a class="btn btn-primary btn-lg" href="demo/" data-evt="demo_open_final"><svg aria-hidden="true"><use href="#i-play"/></svg>Попробовать в&nbsp;браузере</a>
+      <a class="btn btn-ghost btn-lg" href="https://t.me/vidivieverbot" data-evt="subscribe"><svg aria-hidden="true"><use href="#i-tg"/></svg>Оформить подписку</a>
     </div>
   </div>
 </section>
 
 </main>
 
-<!-- ===== Footer ===== -->
 <footer class="site-footer">
   <div class="wrap">
-    <div class="disclaimer reveal">
-      <svg><use href="#i-alert"/></svg>
+    <div class="disclaimer">
+      <svg aria-hidden="true"><use href="#i-info"/></svg>
       <span><b>Не предназначено для клинической диагностики.</b> Vidi — инструмент просмотра и планирования; не сертифицирован (нет FDA / CE / Росздравнадзор). Для диагностики предназначено сертифицированное ПО.</span>
     </div>
     <div class="foot-grid">
       <div class="foot-brand">
-        <a class="brand" href="#top"><img class="logo" src="assets/icon.png" alt="Vidi" width="30" height="30" />Vidi</a>
-        <p class="lead">Нативный просмотрщик стоматологических КЛКТ для macOS.</p>
+        <a class="brand" href="#top"><img class="logo" src="assets/icon-60.webp" alt="" width="28" height="28" loading="lazy" />Vidi</a>
+        <p>Нативный просмотрщик стоматологических КЛКТ для macOS.</p>
       </div>
       <div>
-        <h4>Продукт</h4>
+        <h2 class="foot-h">Продукт</h2>
         <a href="#features">Возможности</a>
-        <a href="#formats">Форматы</a>
-        <a href="#download">Скачать</a>
+        <a href="#formats">Форматы и требования</a>
+        <a href="#download">Цена и скачивание</a>
       </div>
       <div>
-        <h4>Поддержка</h4>
-        <a href="#faq">FAQ</a>
-        <a href="#requirements">Системные требования</a>
-        <a href="https://t.me/vidivieverbot">Подписка (Telegram)</a>
+        <h2 class="foot-h">Поддержка</h2>
+        <a href="#faq">Частые вопросы</a>
+        <a href="/kak-otkryt-klkt-na-mac/">Как открыть КЛКТ на Mac</a>
+        <a href="https://t.me/vidivieverbot">Подписка в Telegram</a>
       </div>
       <div>
-        <h4>Контакты</h4>
-        <p>vidiviewer@yandex.ru</p>
+        <h2 class="foot-h">Контакты</h2>
+        <a href="mailto:vidiviewer@yandex.ru">vidiviewer@yandex.ru</a>
         <a href="/oferta.html">Публичная оферта</a>
         <a href="/privacy.html">Политика обработки ПДн</a>
         <a href="/agreement-personal-data.html">Согласие на обработку ПДн</a>
       </div>
     </div>
     <div class="foot-bottom">
-      <span>© 2026 Vidi. Все права защищены.</span>
-      <span class="mono">macOS · Apple Silicon · DICOM</span>
+      <span>© 2026 Vidi</span>
+      <span>vidiviewer.ru · macOS 14.0+ · Apple Silicon</span>
     </div>
   </div>
 </footer>
 
-<script src="landing.js"></script>
+<script src="landing.js" defer></script>
 </body>
 </html>

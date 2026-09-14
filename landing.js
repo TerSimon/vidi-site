@@ -1,117 +1,190 @@
-// Vidi landing — vanilla interactions (no framework dependency).
+// Vidi landing — vanilla interactions, без зависимостей.
+// FAQ — нативный <details>, отзывы — сетка: для них JS не нужен.
 
 (function () {
-  // ---- App-window placeholder injector (stand-in for real screenshots) ----
-  const PANES = `
-    <div class="pane axial"><span class="plabel">Аксиаль</span><span class="anat t">A</span><span class="anat b">P</span><span class="anat l">R</span><span class="anat r">L</span></div>
-    <div class="pane sagittal"><span class="plabel">Сагитталь</span><span class="anat t">S</span><span class="anat b">I</span><span class="anat l">A</span><span class="anat r">P</span></div>
-    <div class="pane coronal"><span class="plabel">Корональ</span><span class="anat t">S</span><span class="anat b">I</span><span class="anat l">R</span><span class="anat r">L</span></div>
-    <div class="pane vol"><span class="plabel">3D · Кость</span></div>`;
-  function appwin(tag) {
-    return `<div class="appwin">
-      <div class="titlebar">
-        <div class="lights"><i></i><i></i><i></i></div>
-        <div class="wintabs"><span class="wintab on">Пациент_01</span><span class="wintab">Пациент_02</span></div>
-      </div>
-      <div class="mpr-grid">${PANES}</div>
-      <div class="ph-tag">плейсхолдер · ${tag}</div>
-    </div>`;
-  }
-  document.querySelectorAll("[data-appwin]").forEach((el) => {
-    el.innerHTML = appwin(el.getAttribute("data-appwin"));
-  });
+  window.__vidiReady = true;
 
-  // ---- Sticky header blur on scroll ----
-  const header = document.querySelector(".site-header");
-  const onScroll = () => header.classList.toggle("scrolled", window.scrollY > 12);
-  onScroll();
-  window.addEventListener("scroll", onScroll, { passive: true });
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const hasIO = "IntersectionObserver" in window;
 
-  // ---- Mobile nav (simple) ----
+  // ---- Mobile nav ----
   const burger = document.querySelector(".nav-burger");
-  if (burger) {
-    burger.addEventListener("click", () => {
-      const links = document.querySelector(".nav-links");
-      const open = links.style.display === "flex";
-      links.style.cssText = open ? "" :
-        "display:flex;position:absolute;top:68px;left:0;right:0;flex-direction:column;background:rgba(11,14,20,.96);backdrop-filter:blur(18px);padding:14px;border-bottom:1px solid var(--hair-soft);gap:2px";
+  const nav = document.getElementById("site-nav");
+  if (burger && nav) {
+    const setOpen = (open) => {
+      nav.classList.toggle("open", open);
+      burger.setAttribute("aria-expanded", String(open));
+      burger.setAttribute("aria-label", open ? "Закрыть меню" : "Открыть меню");
+    };
+    burger.addEventListener("click", () => setOpen(!nav.classList.contains("open")));
+    nav.addEventListener("click", (e) => { if (e.target.closest("a")) setOpen(false); });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && nav.classList.contains("open")) { setOpen(false); burger.focus(); }
     });
   }
 
-  // ---- FAQ accordion ----
-  document.querySelectorAll(".faq-q").forEach((q) => {
-    q.addEventListener("click", () => {
-      const item = q.closest(".faq-item");
-      const ans = item.querySelector(".faq-a");
-      const isOpen = item.classList.contains("open");
-      if (isOpen) {
-        item.classList.remove("open");
-        ans.style.maxHeight = "0px";
-      } else {
-        item.classList.add("open");
-        ans.style.maxHeight = ans.querySelector(".faq-a-inner").offsetHeight + "px";
-      }
-      q.setAttribute("aria-expanded", String(!isOpen));
-    });
-  });
+  // ---- Hero: сцена «архив → исследование» ----
+  // Тайминги живут в CSS; здесь — старт, когда окно в кадре, финал и повтор.
+  const stage = document.getElementById("stage");
+  if (stage) {
+    const SCENE_MS = 4300;
+    const planeButtons = Array.from(stage.querySelectorAll(".planes button"));
+    let pinned = "";
+    let cycleTimer = 0;
 
-  // ---- Scroll reveal (re-runnable when hero variant changes) ----
-  let io;
-  function refreshReveal() {
-    const anim = document.documentElement.dataset.anim === "on";
-    const els = document.querySelectorAll(".reveal");
-    if (!anim) { els.forEach((e) => e.classList.add("in")); return; }
-    if (io) io.disconnect();
-    io = new IntersectionObserver((entries) => {
-      entries.forEach((en) => {
-        if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+    const showPane = (name) => { stage.dataset.pane = name || pinned; };
+
+    const cyclePanes = () => {
+      const order = ["axial", "sagittal", "coronal", "vol"];
+      let i = 0;
+      clearInterval(cycleTimer);
+      cycleTimer = setInterval(() => {
+        if (i < order.length) { showPane(order[i++]); }
+        else { clearInterval(cycleTimer); showPane(""); }
+      }, 520);
+    };
+
+    const finish = () => {
+      stage.classList.add("is-done");
+      cyclePanes();
+    };
+
+    const play = () => {
+      stage.classList.add("is-playing");
+      setTimeout(finish, SCENE_MS);
+    };
+
+    if (reduceMotion) {
+      stage.dataset.pane = "";
+    } else if (hasIO) {
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some((en) => en.isIntersecting)) { io.disconnect(); play(); }
+      }, { threshold: 0.25 });
+      io.observe(stage.querySelector(".window"));
+    } else {
+      finish();
+    }
+
+    const replay = stage.querySelector("[data-replay]");
+    if (replay) {
+      replay.addEventListener("click", () => {
+        clearInterval(cycleTimer);
+        showPane("");
+        stage.classList.remove("is-done");
+        // пересоздаём узлы — CSS-анимации стартуют заново
+        stage.querySelectorAll(".drop").forEach((el) => el.replaceWith(el.cloneNode(true)));
+        setTimeout(finish, SCENE_MS);
       });
-    }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
-    els.forEach((e) => {
-      // already-visible (e.g. hidden hero just shown above fold) → reveal now
-      const r = e.getBoundingClientRect();
-      if (r.top < window.innerHeight * 0.92 && r.bottom > 0) { e.classList.add("in"); }
-      else { e.classList.remove("in"); io.observe(e); }
-    });
-  }
-  window.__refreshReveal = refreshReveal;
-  // initial run (tweaks-app also calls it after applying attrs)
-  requestAnimationFrame(refreshReveal);
+    }
 
-  // ---- Email form (visual only — no backend) ----
-  const form = document.getElementById("lead-form");
-  if (form) {
-    const email = form.querySelector('input[type="email"]');
-    const consent = form.querySelector('input[type="checkbox"]');
-    const msg = form.querySelector(".lf-msg");
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      msg.className = "lf-msg";
-      const valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.value.trim());
-      if (!valid) {
-        email.classList.add("err");
-        msg.textContent = "Нужен корректный email.";
-        msg.classList.add("bad");
-        return;
-      }
-      email.classList.remove("err");
-      if (!consent.checked) {
-        msg.textContent = "Нужно согласие на обработку персональных данных.";
-        msg.classList.add("bad");
-        return;
-      }
-      // Demo: no backend. Owner wires this to a Telegram bot / Formspree (see README).
-      msg.textContent = "Готово (демо). Подключите Telegram-бот или сервис форм — см. README.";
-      msg.classList.add("ok");
-      form.reset();
+    planeButtons.forEach((btn) => {
+      const name = btn.dataset.pane;
+      btn.addEventListener("pointerenter", () => { clearInterval(cycleTimer); showPane(name); });
+      btn.addEventListener("pointerleave", () => showPane(""));
+      btn.addEventListener("focus", () => { clearInterval(cycleTimer); showPane(name); });
+      btn.addEventListener("blur", () => showPane(""));
+      btn.addEventListener("click", () => {
+        pinned = pinned === name ? "" : name;
+        planeButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.pane === pinned)));
+        showPane(pinned);
+      });
     });
   }
 
-  // ---- Close mobile nav on link click / smooth anchor offset handled by CSS ----
-  document.querySelectorAll('.nav-links a[href^="#"]').forEach((a) => {
-    a.addEventListener("click", () => {
-      const links = document.querySelector(".nav-links");
-      if (window.innerWidth <= 980) links.style.cssText = "";
+  // ---- Дерево архива: проигрывается один раз, когда попало в кадр ----
+  const tree = document.getElementById("tree");
+  if (tree) {
+    if (reduceMotion || !hasIO) {
+      tree.classList.add("is-on");
+    } else {
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some((en) => en.isIntersecting)) { io.disconnect(); tree.classList.add("is-on"); }
+      }, { threshold: 0.45 });
+      io.observe(tree);
+    }
+  }
+
+  // ---- Возможности: шаг в центре экрана выбирает кадр справа ----
+  const frame = document.getElementById("story-frame");
+  const steps = Array.from(document.querySelectorAll(".story-step"));
+  if (frame && steps.length && hasIO) {
+    const shots = Array.from(frame.querySelectorAll("img"));
+    let current = 0;
+    const setActive = (idx) => {
+      if (idx === current) return;
+      current = idx;
+      steps.forEach((s, i) => s.classList.toggle("on", i === idx));
+      shots.forEach((img, i) => img.classList.toggle("on", i === idx));
+    };
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => { if (en.isIntersecting) setActive(Number(en.target.dataset.shot)); });
+    }, { rootMargin: "-45% 0px -45% 0px" });
+    steps.forEach((s) => io.observe(s));
+  }
+
+  // ---- Интерактив: расстояние от импланта до канала ----
+  const demo = document.getElementById("canal-demo");
+  const range = document.getElementById("depth");
+  if (demo && range) {
+    const CANAL_TOP = 279;   // верхний край канала на схеме, px
+    const PX_PER_MM = 17;
+    const IMPLANT_TOP = 40;
+    const D_MAX = 4;
+    const D_MIN = 0.2;
+    const LABELS = { good: "Безопасно", warn: "Близко", danger: "Опасно" };
+
+    const body = demo.querySelector("#implant-body");
+    const thread = demo.querySelector("#implant-thread");
+    const mLine = demo.querySelector("#m-line");
+    const mTop = demo.querySelector("#m-top");
+    const mText = demo.querySelector("#m-text");
+    const val = document.getElementById("demo-val");
+    const stateEl = document.getElementById("demo-state");
+
+    const update = () => {
+      const v = Number(range.value);
+      const d = D_MAX - (v / 100) * (D_MAX - D_MIN);
+      const apex = CANAL_TOP - d * PX_PER_MM;
+      const text = d.toFixed(1);
+      const shown = Number(text); // порог — по тому же числу, что видит врач
+      const state = shown >= 2 ? "good" : shown >= 1 ? "warn" : "danger";
+
+      body.setAttribute("height", (apex - IMPLANT_TOP).toFixed(1));
+      thread.setAttribute("height", Math.max(0, apex - IMPLANT_TOP - 24).toFixed(1));
+      mLine.setAttribute("y1", apex.toFixed(1));
+      mTop.setAttribute("y1", apex.toFixed(1));
+      mTop.setAttribute("y2", apex.toFixed(1));
+      mText.setAttribute("y", ((apex + CANAL_TOP) / 2 + 5).toFixed(1));
+      mText.textContent = text + " мм";
+
+      demo.dataset.state = state;
+      val.firstChild.nodeValue = text;
+      stateEl.textContent = LABELS[state];
+      stateEl.className = "badge badge-" + state;
+      range.style.setProperty("--fill", v + "%");
+      range.setAttribute("aria-valuetext", "До канала " + text + " мм — " + LABELS[state].toLowerCase());
+    };
+    range.addEventListener("input", update);
+    update();
+  }
+
+  // ---- Карточки тарифа: подсветка следует за курсором (как plan-card в дизайн-системе) ----
+  if (window.matchMedia("(pointer: fine)").matches) {
+    document.querySelectorAll(".plan").forEach((card) => {
+      card.addEventListener("pointermove", (e) => {
+        const r = card.getBoundingClientRect();
+        card.style.setProperty("--mx", (e.clientX - r.left) + "px");
+        card.style.setProperty("--my", (e.clientY - r.top) + "px");
+      });
     });
+  }
+
+  // ---- Analytics: data-evt → цель Яндекс.Метрики (заработает после установки счётчика) ----
+  const YM_COUNTER_ID = 0; // TODO: номер счётчика Метрики
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-evt]");
+    if (el && YM_COUNTER_ID && typeof window.ym === "function") {
+      window.ym(YM_COUNTER_ID, "reachGoal", el.dataset.evt);
+    }
   });
 })();

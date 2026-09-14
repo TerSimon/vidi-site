@@ -1,0 +1,51 @@
+{
+ "title": "Демонстрационное КЛКТ",
+ "orientation": "LPS: +x patient left, +y posterior, +z superior; data x-fastest",
+ "huMin": -1000.0,
+ "huMax": 5500.0,
+ "window": {
+  "center": 2000.0,
+  "width": 7000.0
+ },
+ "initial": {
+  "crosshair": [
+   56.27,
+   55.38,
+   51.0
+  ]
+ },
+ "levels": [
+  {
+   "name": "lo",
+   "file": "ct-lo.bin",
+   "version": "9e6c8a6e62",
+   "dims": [
+    183,
+    183,
+    150
+   ],
+   "spacing": [
+    0.6,
+    0.6,
+    0.6
+   ],
+   "bytes": 2260766
+  },
+  {
+   "name": "hi",
+   "file": "ct-hi.bin",
+   "version": "0fcb08acf2",
+   "dims": [
+    275,
+    275,
+    225
+   ],
+   "spacing": [
+    0.4,
+    0.4,
+    0.4
+   ],
+   "bytes": 7318195
+  }
+ ]
+}
