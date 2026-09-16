@@ -1,6 +1,8 @@
 // Этап 0: страница вокруг worker.js. Кроме распаковки проверяет, стирает ли
 // браузер данные сайта сам (от этого зависит, будет ли вход в Vidi забываться).
 
+// Меняется вместе с ?v= в index.html: без этого Safari может взять старый воркер из кеша.
+const VERSION = 2;
 const RUN_KEY = 'vidi-spike-run';
 const FIRST_SEEN_KEY = 'vidi-spike-first-seen';
 const COOKIE_NAME = 'vidi_spike_first';
@@ -50,11 +52,19 @@ function renderNumbers(s) {
   row(dl, 'Файлов', String(s.files));
   row(dl, 'Из них DICOM', String(s.dicom));
   if (s.nested) row(dl, 'Архивов внутри', String(s.nested));
-  if (s.encrypted) row(dl, 'Защищены паролем', String(s.encrypted));
+  if (s.encrypted) row(dl, 'С паролем (пропущены)', String(s.encrypted));
   row(dl, 'Самый большой файл', mb(s.largestFile));
   row(dl, 'Время', sec(s.elapsedMs));
   if (s.elapsedMs > 0) row(dl, 'Скорость', `${(s.bytesOut / 1048576 / (s.elapsedMs / 1000)).toFixed(0)} МБ/с`);
   if (s.firstFileMs !== null) row(dl, 'До первого файла', sec(s.firstFileMs));
+  // Разбивка по шагам — только для RAR/7z, где работает 7-Zip.
+  if (s.sevenZipRuns > 0) {
+    row(dl, 'Запуск 7-Zip', sec(s.wasmInitMs));
+    row(dl, 'Оглавление', sec(s.listMs));
+    row(dl, 'Распаковка', sec(s.extractMs));
+    if (s.nestedMs > 0) row(dl, 'Вложенные архивы', sec(s.nestedMs));
+    row(dl, 'Чтений с диска', `${s.readCalls} за ${sec(s.readMs)}`);
+  }
 }
 
 function setStatus(text, tone) {
@@ -87,7 +97,7 @@ function run(file) {
   $('numbers').replaceChildren();
   writeRun({ archiveBytes: file.size, files: 0, bytesOut: 0, elapsedMs: 0 });
 
-  const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+  const worker = new Worker(new URL(`./worker.js?v=${VERSION}`, import.meta.url), { type: 'module' });
   const finish = () => {
     worker.terminate();
     writeRun(null);
@@ -119,7 +129,8 @@ function run(file) {
     window.__spikeResult = { ok: false, reason: 'worker-error' };
   };
 
-  worker.postMessage({ file, debugGc: new URLSearchParams(location.search).has('gc') });
+  const query = new URLSearchParams(location.search);
+  worker.postMessage({ file, debugGc: query.has('gc'), noReadAhead: query.has('noreadahead') });
 }
 
 function daysSince(iso) {
@@ -157,7 +168,7 @@ $('pick').addEventListener('change', () => {
   if (file) run(file);
 });
 
-$('device').textContent = `${navigator.userAgent} · ядер: ${navigator.hardwareConcurrency ?? '?'}`
+$('device').textContent = `Версия ${VERSION} · ${navigator.userAgent} · ядер: ${navigator.hardwareConcurrency ?? '?'}`
   + ` · DecompressionStream: ${'DecompressionStream' in window ? 'есть' : 'нет'}`
   + ` · WebGL 2: ${document.createElement('canvas').getContext('webgl2') ? 'есть' : 'нет'}`;
 

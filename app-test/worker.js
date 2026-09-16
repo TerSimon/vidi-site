@@ -52,6 +52,13 @@ function newStats() {
     largestKept: 0,
     wasmHeapMB: 0,
     sevenZipRuns: 0,
+    readCalls: 0,
+    readBytes: 0,
+    readMs: 0,
+    wasmInitMs: 0,
+    listMs: 0,
+    extractMs: 0,
+    nestedMs: 0,
     firstFileMs: null,
     startedAt: performance.now(),
   };
@@ -240,22 +247,50 @@ function sevenZipError(code) {
   return `code-${code}`;
 }
 
-function newSevenZip(onLine) {
-  return SevenZip({
+async function newSevenZip(onLine) {
+  const started = performance.now();
+  const module = await SevenZip({
     locateFile: (path) => new URL(`./vendor/${path}`, import.meta.url).href,
     print: onLine ?? (() => {}),
     printErr: () => {},
   });
+  stats.wasmInitMs += performance.now() - started;
+  return module;
 }
+
+// Сколько читать с диска за раз. WORKERFS на каждое обращение 7-Zip делает
+// отдельное синхронное чтение File; оглавление RAR — это тысячи мелких чтений
+// заголовков по всему архиву, и на iPhone каждое такое чтение дорогое.
+// Блок читается один раз, мелкие обращения обслуживаются из него.
+let readAheadBytes = 16 * 1048576;
 
 function mountArchive(module, blob, name) {
-  module.FS.mkdir('/in');
+  const FS = module.FS;
+  FS.mkdir('/in');
   // Новый File на тех же данных не копирует их: браузер хранит ссылку на исходный.
-  module.FS.mount(module.WORKERFS, { files: [new File([blob], name)] }, '/in');
+  FS.mount(module.WORKERFS, { files: [new File([blob], name)] }, '/in');
+
+  const reader = new FileReaderSync();
+  module.WORKERFS.stream_ops.read = (stream, buffer, offset, length, position) => {
+    const node = stream.node;
+    if (position >= node.size) return 0;
+    const end = Math.min(node.size, position + length);
+    let cache = node.vidiCache;
+    if (!cache || position < cache.start || end > cache.start + cache.bytes.length) {
+      const blockEnd = Math.min(node.size, position + Math.max(length, readAheadBytes));
+      const started = performance.now();
+      const block = reader.readAsArrayBuffer(node.contents.slice(position, blockEnd));
+      stats.readMs += performance.now() - started;
+      stats.readCalls++;
+      stats.readBytes += block.byteLength;
+      cache = { start: position, bytes: new Uint8Array(block) };
+      node.vidiCache = cache;
+    }
+    buffer.set(cache.bytes.subarray(position - cache.start, end - cache.start), offset);
+    return end - position;
+  };
 }
 
-// Размеры файлов из оглавления: по ним приёмник выделяет буфер один раз.
-// Оглавление 7-Zip читает без распаковки, поэтому это быстро даже для RAR.
 // Путь элемента так, как 7-Zip создаёт его при распаковке: без «./», с «/».
 function normalizePath(path) {
   return path.replace(/\\/g, '/').split('/').filter((part) => part !== '' && part !== '.').join('/');
@@ -355,7 +390,10 @@ function runSevenZip(module, args) {
 async function readWith7z(source, depth, kind) {
   const blob = source instanceof Uint8Array ? new Blob([source]) : source;
   const name = `archive.${kind === 'rar5' ? 'rar' : kind}`;
+  let phase = performance.now();
   const entries = await listEntries(blob, name);
+  stats.listMs += performance.now() - phase;
+  phase = performance.now();
 
   // Вложенный архив, которого нет в оглавлении, второй проход не найдёт —
   // такой держим в памяти сразу, как в простом варианте.
@@ -370,17 +408,20 @@ async function readWith7z(source, depth, kind) {
     tick();
   });
   runSevenZip(first, ['x', `/in/${name}`, '-o/out', '-y']);
+  stats.extractMs += performance.now() - phase;
 
   for (const inner of inMemory.splice(0)) await readAny(inner, depth + 1);
 
   for (const path of laterPaths) {
     let inner = null;
+    phase = performance.now();
     const module = await newSevenZip();
     mountArchive(module, blob, name);
     interceptOutput(module, entries, () => true, (_, result) => { inner = result.bytes; });
     // -spd: имя — это имя, а не маска; в именах бывают [ ] и *.
     runSevenZip(module, ['x', `/in/${name}`, '-o/out', '-y', '-spd', entries.get(path).itemPath]);
     if (!inner) throw new Error('nested-missing');
+    stats.nestedMs += performance.now() - phase;
     await readAny(inner, depth + 1);
   }
 }
@@ -405,6 +446,7 @@ self.onmessage = async ({ data }) => {
   stats = newStats();
   stats.archiveBytes = data.file.size;
   debugGc = data.debugGc === true;
+  readAheadBytes = data.noReadAhead === true ? 0 : 16 * 1048576;
   try {
     await readAny(data.file, 0);
     post('done');
