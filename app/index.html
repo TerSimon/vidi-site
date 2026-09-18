@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<!-- viewport-fit=cover + safe-area в CSS: на iPhone без этого нижняя панель уезжает под
+     полосу жестов, а её кнопки перестают нажиматься. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B0E14">
+<title>Vidi</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="app.css?v=1">
+</head>
+<body>
+
+<!-- Экран 1: старт. -->
+<section class="screen" id="screen-start" data-screen="start">
+  <div class="start">
+    <header class="start-head">
+      <div class="wordmark">Vidi</div>
+      <p class="lead">Просмотр КТ в браузере</p>
+    </header>
+
+    <div class="card">
+      <button class="btn btn-primary" id="btn-open" type="button">Открыть КТ</button>
+      <p class="hint" id="open-hint">Архив открывается на этом устройстве и никуда не отправляется.</p>
+    </div>
+
+    <div class="card" id="env-card">
+      <div class="card-title">Проверка браузера</div>
+      <dl class="rows" id="env-rows"></dl>
+      <p class="hint" id="env-hint" hidden></p>
+    </div>
+
+    <footer class="start-foot">
+      <span id="version-start"></span>
+    </footer>
+  </div>
+</section>
+
+<!-- Экран 2: просмотр. Каркас: панели-заглушки, панель инструментов выключена. -->
+<section class="screen" id="screen-viewer" data-screen="viewer" hidden>
+
+  <header class="topbar">
+    <button class="icon-btn" id="btn-back" type="button" aria-label="Назад">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <div class="patient" id="patient">Исследование не открыто</div>
+    <div class="topbar-right">
+      <span class="version" id="version-viewer"></span>
+    </div>
+  </header>
+
+  <!-- Переключатель панелей: виден только на узком экране. -->
+  <nav class="planes" id="planes" role="tablist" aria-label="Проекции">
+    <button class="plane-tab is-active" role="tab" type="button" data-plane="axial" aria-selected="true">Акс</button>
+    <button class="plane-tab" role="tab" type="button" data-plane="sagittal" aria-selected="false">Саг</button>
+    <button class="plane-tab" role="tab" type="button" data-plane="coronal" aria-selected="false">Кор</button>
+    <button class="plane-tab" role="tab" type="button" data-plane="volume" aria-selected="false">3D</button>
+  </nav>
+
+  <main class="grid" id="grid">
+    <div class="pane is-active" data-plane="axial">
+      <canvas class="pane-canvas" data-plane="axial"></canvas>
+      <div class="pane-name" style="--plane: var(--axial)">Аксиальная</div>
+      <div class="mark mark-l">R</div>
+      <div class="mark mark-r">L</div>
+      <div class="pane-empty">нет исследования</div>
+    </div>
+    <div class="pane" data-plane="sagittal">
+      <canvas class="pane-canvas" data-plane="sagittal"></canvas>
+      <div class="pane-name" style="--plane: var(--sagittal)">Сагиттальная</div>
+      <div class="mark mark-l">A</div>
+      <div class="mark mark-r">P</div>
+      <div class="pane-empty">нет исследования</div>
+    </div>
+    <div class="pane" data-plane="coronal">
+      <canvas class="pane-canvas" data-plane="coronal"></canvas>
+      <div class="pane-name" style="--plane: var(--coronal)">Корональная</div>
+      <div class="mark mark-l">R</div>
+      <div class="mark mark-r">L</div>
+      <div class="pane-empty">нет исследования</div>
+    </div>
+    <div class="pane" data-plane="volume">
+      <canvas class="pane-canvas" data-plane="volume"></canvas>
+      <div class="pane-name">3D</div>
+      <button class="pane-switch" id="btn-pano" type="button" disabled>Панорама</button>
+      <div class="pane-empty">нет исследования</div>
+    </div>
+  </main>
+
+  <div class="toolbar" id="toolbar" role="toolbar" aria-label="Инструменты">
+    <button class="tool" type="button" disabled data-tool="window">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 010 16z" fill="currentColor" stroke="none"/></svg>
+      <span>Окно</span>
+    </button>
+    <button class="tool" type="button" disabled data-tool="slab">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16"/></svg>
+      <span>Слой</span>
+    </button>
+    <button class="tool" type="button" disabled data-tool="ruler">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15L15 4l5 5L9 20z"/><path d="M8 11l2 2M11 8l2 2M14 13l2 2"/></svg>
+      <span>Линейка</span>
+    </button>
+    <button class="tool" type="button" disabled data-tool="angle">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19h15M5 19L17 6"/><path d="M9 19a6 6 0 00.9-3"/></svg>
+      <span>Угол</span>
+    </button>
+    <button class="tool" type="button" disabled data-tool="reset">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 108-8 8 8 0 00-5.7 2.4L4 9"/><path d="M4 4v5h5"/></svg>
+      <span>Сброс</span>
+    </button>
+  </div>
+
+  <div class="plate" id="plate" hidden></div>
+</section>
+
+<!-- Сообщение об ошибке. На экран выводится код; наружу ничего не отправляется. -->
+<div class="error-sheet" id="error-sheet" hidden role="alertdialog" aria-labelledby="error-title">
+  <div class="error-card">
+    <div class="card-title" id="error-title">Не получилось</div>
+    <p class="error-text" id="error-text"></p>
+    <p class="hint">Код ошибки <code id="error-code"></code>. Назовите его в поддержке — он не содержит данных пациента.</p>
+    <button class="btn" id="error-close" type="button">Понятно</button>
+  </div>
+</div>
+
+<script type="module" src="app.js?v=1"></script>
+</body>
+</html>

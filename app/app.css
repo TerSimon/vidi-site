@@ -1,0 +1,404 @@
+/*
+  Оболочка Vidi в браузере. Палитра — те же токены, что в приложении на Mac
+  (Color+Vidi.swift): врач не должен видеть два разных Vidi.
+
+  Два правила, которые здесь важнее красоты:
+  1) страница НЕ прокручивается — снимок занимает экран целиком, а прокрутка
+     на телефоне уводит изображение из-под пальца во время протяжки;
+  2) высота считается через dvh и safe-area — иначе на iPhone нижняя панель
+     уезжает под полосу жестов и её кнопки перестают нажиматься.
+*/
+
+:root {
+  color-scheme: dark;
+
+  --bg0: #0B0E14;
+  --bg1: #0E1117;
+  --ink: #F2F4F8;
+  --ink2: #A6B0BE;
+  --ink3: #7D8794;
+  --accent: #4F9CFF;
+  --on-accent: #06101E;
+
+  --axial: #8CBFFF;
+  --sagittal: #FF8C8C;
+  --coronal: #99F299;
+
+  --danger: #DC3232;
+  --safe: #99F299;
+
+  --glass: rgba(13, 16, 23, .66);
+  --panel: rgba(15, 18, 26, .88);
+  --surface: rgba(255, 255, 255, .05);
+  --surface2: rgba(255, 255, 255, .09);
+  --hair: rgba(255, 255, 255, .12);
+  --hair-soft: rgba(255, 255, 255, .07);
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --radius: 14px;
+  --tap: 44px; /* минимальная площадь нажатия — палец, не курсор */
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--bg0);
+  color: var(--ink);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Старт ─────────────────────────────────────────────────────────────── */
+
+.start {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding:
+    calc(32px + var(--safe-top))
+    calc(16px + var(--safe-right))
+    calc(24px + var(--safe-bottom))
+    calc(16px + var(--safe-left));
+}
+
+.start-head { display: grid; gap: 6px; }
+
+.wordmark {
+  font-size: 34px;
+  font-weight: 650;
+  letter-spacing: -.02em;
+}
+
+.lead { margin: 0; color: var(--ink2); }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--hair-soft);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.card-title { font-weight: 600; }
+
+.hint { margin: 0; color: var(--ink3); font-size: 14px; }
+
+.rows {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 12px;
+  margin: 0;
+  font-size: 14px;
+}
+.rows dt { color: var(--ink2); }
+.rows dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.rows dd.ok { color: var(--safe); }
+.rows dd.bad { color: var(--danger); }
+
+.btn {
+  appearance: none;
+  min-height: var(--tap);
+  padding: 12px 18px;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .12s ease, transform .12s ease, opacity .12s ease;
+}
+.btn:hover { background: var(--surface2); }
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .45; cursor: default; transform: none; }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--on-accent);
+}
+.btn-primary:hover { background: #63a8ff; }
+
+.start-foot {
+  margin-top: auto;
+  padding-top: 8px;
+  color: var(--ink3);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Просмотр ──────────────────────────────────────────────────────────── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding:
+    calc(8px + var(--safe-top))
+    calc(12px + var(--safe-right))
+    8px
+    calc(12px + var(--safe-left));
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--hair-soft);
+}
+
+.icon-btn {
+  appearance: none;
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.icon-btn:hover { background: var(--surface); }
+.icon-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.patient {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.topbar-right { flex: none; color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+.planes {
+  display: none; /* на широком экране видны все четыре панели сразу */
+  gap: 4px;
+  padding: 8px calc(12px + var(--safe-right)) 8px calc(12px + var(--safe-left));
+  background: var(--glass);
+  border-bottom: 1px solid var(--hair-soft);
+}
+
+.plane-tab {
+  appearance: none;
+  flex: 1;
+  min-height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink2);
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+.plane-tab.is-active { background: var(--surface2); color: var(--ink); }
+
+.grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 1px;
+  background: var(--hair);
+}
+
+.pane {
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  touch-action: none; /* жесты обрабатываем сами, иначе Safari тянет страницу */
+}
+
+.pane-canvas { display: block; width: 100%; height: 100%; }
+
+.pane-name {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--plane, var(--ink2));
+  pointer-events: none;
+}
+
+/* Метки сторон пациента. Врач по ним понимает, где правая сторона. */
+.mark {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink2);
+  pointer-events: none;
+}
+.mark-l { left: 8px; }
+.mark-r { right: 8px; }
+
+/* Смещена ниже центра: по центру она ложится ровно на перекрестие и закрывает
+   его горизонтальный штрих — именно по нему видно, верно ли посчитан canvas. */
+.pane-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-top: 22%;
+  color: var(--ink3);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.pane-switch {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pane-switch:disabled { opacity: .4; cursor: default; }
+
+.toolbar {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px calc(8px + var(--safe-right)) calc(6px + var(--safe-bottom)) calc(8px + var(--safe-left));
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--hair-soft);
+}
+
+.tool {
+  appearance: none;
+  flex: 1 1 0;
+  max-width: 96px;
+  min-height: var(--tap);
+  display: grid;
+  gap: 2px;
+  place-items: center;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.tool:hover { background: var(--surface); }
+.tool.is-active { background: var(--surface2); color: var(--accent); }
+.tool:disabled { opacity: .38; cursor: default; background: transparent; }
+.tool svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Плашка поверх снимка: «Разрешение 0,4 мм», предупреждения. */
+.plate {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--tap) + 24px + var(--safe-bottom));
+  transform: translateX(-50%);
+  max-width: min(92vw, 420px);
+  padding: 10px 14px;
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  background: var(--panel);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: var(--ink2);
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* ─── Ошибка ────────────────────────────────────────────────────────────── */
+
+.error-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, .55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.error-card {
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.error-text { margin: 0; color: var(--ink2); }
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+/* ─── Узкий экран: одна панель + переключатель ──────────────────────────── */
+
+@media (max-width: 720px) {
+  .planes { display: flex; }
+
+  .grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    gap: 0;
+  }
+
+  /* Панели остаются в разметке: у каждой свой canvas и своё состояние,
+     переключение не пересоздаёт их. */
+  .pane { display: none; }
+  .pane.is-active { display: block; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
