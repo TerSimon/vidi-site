@@ -1,37 +1,64 @@
 //
-//  Оболочка Vidi в браузере. Этап 4 — каркас: экраны, раскладка панелей,
-//  проверка браузера и показ ошибок. Ни DICOM, ни архивов здесь ещё нет.
+//  Оболочка Vidi в браузере. Этап 5 — вход по подписке и правило «одно место за
+//  раз». Просмотр пока каркас: ни DICOM, ни архивов здесь ещё нет.
 //
 //  Два правила действуют с самого начала, чтобы позже их не пришлось вносить
 //  через весь код:
 //  • наружу не уходит ничего — ни имён файлов, ни данных пациента, ни отчётов
 //    об ошибках. На экране только код ошибки, который врач называет вслух;
-//  • в браузере ничего не хранится: ни localStorage, ни кеша исследований.
+//  • из данных браузер помнит только вход (см. auth.js) — снимки не хранятся.
 //
 
-const VERSION = '0.1.0';
-const STAGE = 'каркас';
+import {
+  auth, activate, check, signOut, seat, storageWorks, describeHolder, SEAT_PING_MS,
+} from './auth.js?v=2';
+
+const VERSION = '0.2.0';
+const STAGE = 'вход';
+
+// ─── Мелкие помощники ──────────────────────────────────────────────────────
+
+const $ = (id) => document.getElementById(id);
+
+function setNotice(el, text) {
+  el.textContent = text ?? '';
+  el.hidden = !text;
+}
+
+/** «2 дня» / «5 дней» — иначе получается «осталось 2 дней». */
+function plural(n, one, few, many) {
+  const a = Math.abs(n) % 100;
+  const b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  // Убираем хвост «г.»: дальше в предложении идёт точка, и получалось «2025 г..».
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+    .replace(/\s*г\.\s*$/, '');
+}
 
 // ─── Ошибки ────────────────────────────────────────────────────────────────
 
-const errorSheet = document.getElementById('error-sheet');
-const errorText = document.getElementById('error-text');
-const errorCode = document.getElementById('error-code');
+const errorSheet = $('error-sheet');
 
 /**
  * Показывает ошибку врачу. `code` — короткая метка для разговора с поддержкой,
  * `text` — что делать. Подробности остаются в консоли и никуда не отправляются.
  */
 function showError(code, text, detail) {
-  errorCode.textContent = code;
-  errorText.textContent = text;
+  $('error-code').textContent = code;
+  $('error-text').textContent = text;
   errorSheet.hidden = false;
   if (detail) console.error(`[${code}]`, detail);
 }
 
-document.getElementById('error-close').addEventListener('click', () => {
-  errorSheet.hidden = true;
-});
+$('error-close').addEventListener('click', () => { errorSheet.hidden = true; });
 
 // Необработанный сбой не должен выглядеть как «приложение зависло».
 window.addEventListener('error', (e) => {
@@ -44,11 +71,17 @@ window.addEventListener('unhandledrejection', (e) => {
 // ─── Экраны ────────────────────────────────────────────────────────────────
 
 const screens = {
-  start: document.getElementById('screen-start'),
-  viewer: document.getElementById('screen-viewer'),
+  boot: $('screen-boot'),
+  login: $('screen-login'),
+  blocked: $('screen-blocked'),
+  start: $('screen-start'),
+  viewer: $('screen-viewer'),
 };
 
+let current = 'boot';
+
 function showScreen(name) {
+  current = name;
   for (const [key, el] of Object.entries(screens)) el.hidden = key !== name;
   if (name === 'viewer') layoutAllPanes();
 }
@@ -63,6 +96,9 @@ function showScreen(name) {
  * MAX_3D_TEXTURE_SIZE проверяем не из любопытства: объём КТ грузится в
  * трёхмерную текстуру целиком, и предел меньше 512 означает, что 3D и наклон
  * осей на этом устройстве не получатся.
+ *
+ * Память браузера здесь тоже не ради полноты: без неё каждое открытие страницы
+ * станет новым устройством, а браузерный слот у подписки один.
  */
 function checkEnvironment() {
   const rows = [];
@@ -105,12 +141,16 @@ function checkEnvironment() {
     if (lose) lose.loseContext();
   }
 
+  const canRemember = storageWorks();
+  rows.push(['Память входа', canRemember]);
+  if (!canRemember && !blocking) blocking = 'ENV-STORE';
+
   return { rows, blocking };
 }
 
 function renderEnvironment() {
   const { rows, blocking } = checkEnvironment();
-  const dl = document.getElementById('env-rows');
+  const dl = $('env-rows');
   dl.textContent = '';
 
   for (const [label, ok, value] of rows) {
@@ -122,20 +162,231 @@ function renderEnvironment() {
     dl.append(dt, dd);
   }
 
-  const hint = document.getElementById('env-hint');
-  const openBtn = document.getElementById('btn-open');
-
-  if (blocking) {
+  const hint = $('env-hint');
+  if (blocking === 'ENV-STORE') {
+    // Отдельный текст: дело не в старом браузере, а в приватном окне или
+    // запрете данных сайта. Пускать сюда нельзя — вход привяжется и тут же
+    // забудется, а браузерный слот у подписки один.
+    hint.textContent = 'Браузер не сохраняет вход — обычно это приватное окно или запрет данных сайта. Откройте Vidi в обычном окне, иначе вход придётся привязывать заново каждый раз. Код ENV-STORE.';
+    hint.hidden = false;
+    $('login-submit').disabled = true;
+  } else if (blocking) {
     hint.textContent = 'Этот браузер не сможет открыть КТ. Обновите его или откройте Vidi в Safari либо Chrome. Код ' + blocking + '.';
     hint.hidden = false;
-    openBtn.disabled = true;
-    document.getElementById('open-hint').textContent = 'Открытие недоступно в этом браузере.';
+    $('login-submit').disabled = true;
   } else {
     hint.hidden = true;
   }
+  return blocking;
 }
 
-// ─── Панели ────────────────────────────────────────────────────────────────
+// ─── Вход ──────────────────────────────────────────────────────────────────
+
+const loginForm = $('login-form');
+const loginNotice = $('login-notice');
+
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = $('login-email').value.trim().toLowerCase();
+  const code = $('login-code').value.trim().toUpperCase();
+
+  if (!email || !code) { setNotice(loginNotice, 'Введите почту и код.'); return; }
+  if (!$('login-agree').checked) {
+    setNotice(loginNotice, 'Отметьте согласие с условиями.');
+    return;
+  }
+
+  const btn = $('login-submit');
+  btn.disabled = true;
+  btn.textContent = 'Проверяем…';
+  setNotice(loginNotice, '');
+
+  const r = await activate(email, code);
+
+  btn.disabled = false;
+  btn.textContent = 'Войти';
+
+  switch (r.result) {
+    case 'ok':
+      startSession();
+      break;
+    case 'locked':
+      // Для сервера это успех: код верный, браузер привязан. Молчать здесь
+      // нельзя — врач увидит, что «ничего не произошло».
+      showBlocked('Код верный, вход выполнен — но доступ пока закрыт.',
+        r.paidUntil ? 'Подписка закончилась ' + formatDate(r.paidUntil) + '.'
+                    : 'Подписка не оплачена. Если оплата была — напишите в поддержку.');
+      break;
+    case 'badCode':
+      setNotice(loginNotice, 'Код не подошёл. Проверьте раскладку и пробелы.');
+      break;
+    case 'notFound':
+      setNotice(loginNotice, 'Такой почты нет. Проверьте адрес или зарегистрируйтесь в боте.');
+      break;
+    case 'deviceLimit':
+      setNotice(loginNotice, 'К этой подписке уже привязан другой браузер. ' +
+        'Отвяжите его кнопкой в боте — ' +
+        (r.resetsLeft > 0
+          ? 'осталось ' + r.resetsLeft + ' ' + plural(r.resetsLeft, 'сброс', 'сброса', 'сбросов') + ' в этом месяце.'
+          : 'сбросы в этом месяце закончились.'));
+      break;
+    case 'tooManyAttempts': {
+      const min = r.retryAfter ? Math.ceil(r.retryAfter / 60) : null;
+      setNotice(loginNotice, min
+        ? `Слишком много попыток. Повторите через ${min} ${plural(min, 'минуту', 'минуты', 'минут')}.`
+        : 'Слишком много попыток. Повторите позже.');
+      break;
+    }
+    case 'storage':
+      setNotice(loginNotice, 'Браузер не сохранил вход. Откройте Vidi в обычном окне, не в приватном.');
+      break;
+    case 'network':
+      setNotice(loginNotice, 'Нет связи с сервером. Проверьте интернет.');
+      break;
+    default:
+      setNotice(loginNotice, 'Не получилось войти. Попробуйте ещё раз.');
+  }
+});
+
+// ─── Доступ закрыт ─────────────────────────────────────────────────────────
+
+function showBlocked(title, text) {
+  $('blocked-title').textContent = title;
+  $('blocked-text').textContent = text;
+  $('blocked-email').textContent = auth.email || auth.savedEmail
+    ? 'Аккаунт: ' + (auth.email || auth.savedEmail)
+    : '';
+  stopSeat();
+  showScreen('blocked');
+}
+
+$('blocked-retry').addEventListener('click', () => { boot(); });
+
+$('blocked-signout').addEventListener('click', async () => {
+  const r = await signOut();
+  if (r.result === 'resetLimit') {
+    $('blocked-text').textContent = r.retryAfterDays
+      ? `Сбросы закончились: следующий через ${r.retryAfterDays} ${plural(r.retryAfterDays, 'день', 'дня', 'дней')}. Выйти сейчас нельзя.`
+      : 'Сбросы в этом месяце закончились. Выйти сейчас нельзя.';
+    return;
+  }
+  showLogin();
+});
+
+// ─── Сессия ────────────────────────────────────────────────────────────────
+
+function showLogin() {
+  stopSeat();
+  const email = auth.savedEmail;
+  if (email) $('login-email').value = email;
+  showScreen('login');
+}
+
+function startSession() {
+  $('account-email').textContent = auth.email ?? '—';
+  $('account-paid').textContent = auth.paidUntil ? formatDate(auth.paidUntil) : '—';
+  setNotice($('signout-notice'), '');
+  showScreen('start');
+  startSeat();
+}
+
+$('btn-signout').addEventListener('click', async () => {
+  const btn = $('btn-signout');
+  btn.disabled = true;
+  const r = await signOut();
+  btn.disabled = false;
+
+  if (r.result === 'ok') { showLogin(); return; }
+  if (r.result === 'resetLimit') {
+    setNotice($('signout-notice'), r.retryAfterDays
+      ? `Сбросы закончились: следующий через ${r.retryAfterDays} ${plural(r.retryAfterDays, 'день', 'дня', 'дней')}.`
+      : 'Сбросы в этом месяце закончились.');
+    return;
+  }
+  if (r.result === 'network') {
+    setNotice($('signout-notice'), 'Нет связи с сервером. Попробуйте позже.');
+    return;
+  }
+  setNotice($('signout-notice'), 'Не получилось выйти. Попробуйте позже.');
+});
+
+// ─── Рабочее место ─────────────────────────────────────────────────────────
+
+const seatSheet = $('seat-sheet');
+let seatTimer = null;
+let seatFailures = 0;
+let seatTaken = false;
+
+// Столько подряд неудачных обращений держим прежнюю картину. Обрыв связи не
+// имеет права закрыть врачу снимок: три пропуска — и экран отпускает сам.
+const SEAT_FAILURES_BEFORE_RELEASE = 3;
+
+function showSeatTaken(holder) {
+  seatTaken = true;
+  $('seat-text').textContent = 'Сейчас снимок открыт здесь: ' + holder + '.';
+  seatSheet.hidden = false;
+}
+
+function hideSeatTaken() {
+  seatTaken = false;
+  seatSheet.hidden = true;
+}
+
+async function pingSeat({ claim = false } = {}) {
+  const r = await seat({ claim });
+
+  switch (r.result) {
+    case 'mine':
+      seatFailures = 0;
+      hideSeatTaken();
+      break;
+    case 'taken':
+      seatFailures = 0;
+      showSeatTaken(r.holder);
+      break;
+    case 'revoked':
+      stopSeat();
+      showBlocked('Браузер отвязан',
+        'Эту привязку сняли — в боте или на другом устройстве. Войдите заново.');
+      break;
+    case 'offline':
+      seatFailures += 1;
+      // Долгий обрыв: перестаём утверждать, что место у кого-то другого.
+      if (seatTaken && seatFailures >= SEAT_FAILURES_BEFORE_RELEASE) hideSeatTaken();
+      break;
+    default:
+      // Непонятный ответ не должен запирать работу.
+      hideSeatTaken();
+  }
+}
+
+function startSeat() {
+  stopSeat();
+  seatFailures = 0;
+  pingSeat();
+  seatTimer = setInterval(pingSeat, SEAT_PING_MS);
+}
+
+function stopSeat() {
+  if (seatTimer) clearInterval(seatTimer);
+  seatTimer = null;
+  hideSeatTaken();
+}
+
+$('seat-claim').addEventListener('click', async () => {
+  const btn = $('seat-claim');
+  btn.disabled = true;
+  await pingSeat({ claim: true });
+  btn.disabled = false;
+});
+
+// Вкладку вернули из фона — спрашиваем сразу, не дожидаясь таймера: за это
+// время место мог занять Mac.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && seatTimer) pingSeat();
+});
+
+// ─── Панели просмотра ──────────────────────────────────────────────────────
 
 const panes = Array.from(document.querySelectorAll('.pane'));
 const planeTabs = Array.from(document.querySelectorAll('.plane-tab'));
@@ -216,21 +467,54 @@ if (resizeObserver) for (const pane of panes) resizeObserver.observe(pane);
 window.addEventListener('resize', layoutAllPanes);
 window.addEventListener('orientationchange', () => setTimeout(layoutAllPanes, 200));
 
-// ─── Запуск ────────────────────────────────────────────────────────────────
-
-const versionLabel = VERSION + ' · ' + STAGE;
-document.getElementById('version-start').textContent = 'Vidi ' + versionLabel;
-document.getElementById('version-viewer').textContent = versionLabel;
-
-renderEnvironment();
-
-document.getElementById('btn-open').addEventListener('click', () => {
+$('btn-open').addEventListener('click', () => {
   showScreen('viewer');
-  const plate = document.getElementById('plate');
+  const plate = $('plate');
   plate.textContent = 'Каркас без снимка. Открытие архива и просмотр появятся на следующих этапах.';
   plate.hidden = false;
 });
 
-document.getElementById('btn-back').addEventListener('click', () => showScreen('start'));
+$('btn-back').addEventListener('click', () => showScreen('start'));
 
-showScreen('start');
+// ─── Запуск ────────────────────────────────────────────────────────────────
+
+const versionLabel = VERSION + ' · ' + STAGE;
+$('version-login').textContent = 'Vidi ' + versionLabel;
+$('version-start').textContent = 'Vidi ' + versionLabel;
+$('version-blocked').textContent = 'Vidi ' + versionLabel;
+$('version-viewer').textContent = versionLabel;
+
+async function boot() {
+  showScreen('boot');
+  $('boot-text').textContent = 'Проверяем доступ…';
+
+  const blocking = renderEnvironment();
+  if (blocking) { showLogin(); return; }
+
+  if (!auth.signedIn) { showLogin(); return; }
+
+  const r = await check();
+  switch (r.result) {
+    case 'ok':
+      startSession();
+      break;
+    case 'expired':
+      showBlocked('Подписка не активна',
+        r.paidUntil
+          ? 'Подписка закончилась ' + formatDate(r.paidUntil) + '. Продлите её в боте.'
+          : 'Подписка не оплачена. Если оплата была — напишите в поддержку.');
+      break;
+    case 'revoked':
+      showLogin();
+      setNotice(loginNotice, 'Привязку этого браузера сняли. Войдите заново.');
+      break;
+    case 'offline':
+      showBlocked('Нет связи с сервером',
+        'Vidi в браузере проверяет подписку при каждом открытии. Проверьте интернет и повторите.');
+      break;
+    default:
+      showBlocked('Не удалось проверить доступ', 'Попробуйте ещё раз.');
+  }
+}
+
+boot();

@@ -11,12 +11,85 @@
 <meta name="theme-color" content="#0B0E14">
 <title>Vidi</title>
 <link rel="icon" href="/favicon.ico">
-<link rel="stylesheet" href="app.css?v=1">
+<link rel="stylesheet" href="app.css?v=2">
 </head>
 <body>
 
-<!-- Экран 1: старт. -->
-<section class="screen" id="screen-start" data-screen="start">
+<!-- Пока идёт первая проверка доступа. Без этого экрана на секунду мелькает
+     форма входа у врача, который уже вошёл. -->
+<section class="screen" id="screen-boot" data-screen="boot">
+  <div class="center-note">
+    <div class="wordmark">Vidi</div>
+    <p class="lead" id="boot-text">Проверяем доступ…</p>
+  </div>
+</section>
+
+<!-- Экран входа. -->
+<section class="screen" id="screen-login" data-screen="login" hidden>
+  <div class="start">
+    <header class="start-head">
+      <div class="wordmark">Vidi</div>
+      <p class="lead">Просмотр КТ в браузере</p>
+    </header>
+
+    <form class="card" id="login-form" novalidate>
+      <label class="field">
+        <span class="field-name">Почта</span>
+        <input type="email" id="login-email" name="email" autocomplete="email"
+               inputmode="email" autocapitalize="none" spellcheck="false"
+               placeholder="doctor@example.com" required>
+      </label>
+
+      <label class="field">
+        <span class="field-name">Код доступа</span>
+        <input type="text" id="login-code" name="code" autocomplete="one-time-code"
+               autocapitalize="characters" spellcheck="false" maxlength="16"
+               placeholder="8 символов" required>
+      </label>
+
+      <label class="agree">
+        <input type="checkbox" id="login-agree" required>
+        <span>Согласен с <a href="/oferta.html" target="_blank" rel="noopener">офертой</a>,
+          <a href="/privacy.html" target="_blank" rel="noopener">политикой конфиденциальности</a>
+          и <a href="/agreement-personal-data.html" target="_blank" rel="noopener">обработкой персональных данных</a>.</span>
+      </label>
+
+      <button class="btn btn-primary" id="login-submit" type="submit">Войти</button>
+      <p class="notice" id="login-notice" hidden></p>
+      <p class="hint">Код выдаёт бот <a href="https://t.me/vidivieverbot" target="_blank" rel="noopener">@vidivieverbot</a> — тот же, что для приложения на Mac.</p>
+    </form>
+
+    <div class="card" id="env-card">
+      <div class="card-title">Проверка браузера</div>
+      <dl class="rows" id="env-rows"></dl>
+      <p class="hint" id="env-hint" hidden></p>
+    </div>
+
+    <footer class="start-foot"><span id="version-login"></span></footer>
+  </div>
+</section>
+
+<!-- Доступ закрыт: не оплачено, нет связи или сбой. -->
+<section class="screen" id="screen-blocked" data-screen="blocked" hidden>
+  <div class="start">
+    <header class="start-head">
+      <div class="wordmark">Vidi</div>
+    </header>
+
+    <div class="card">
+      <div class="card-title" id="blocked-title">Доступ закрыт</div>
+      <p class="notice" id="blocked-text"></p>
+      <p class="hint" id="blocked-email"></p>
+      <button class="btn btn-primary" id="blocked-retry" type="button">Проверить ещё раз</button>
+      <button class="btn" id="blocked-signout" type="button">Выйти</button>
+    </div>
+
+    <footer class="start-foot"><span id="version-blocked"></span></footer>
+  </div>
+</section>
+
+<!-- Вход выполнен, доступ открыт. -->
+<section class="screen" id="screen-start" data-screen="start" hidden>
   <div class="start">
     <header class="start-head">
       <div class="wordmark">Vidi</div>
@@ -28,19 +101,21 @@
       <p class="hint" id="open-hint">Архив открывается на этом устройстве и никуда не отправляется.</p>
     </div>
 
-    <div class="card" id="env-card">
-      <div class="card-title">Проверка браузера</div>
-      <dl class="rows" id="env-rows"></dl>
-      <p class="hint" id="env-hint" hidden></p>
+    <div class="card">
+      <dl class="rows">
+        <dt>Аккаунт</dt><dd id="account-email"></dd>
+        <dt>Подписка до</dt><dd id="account-paid"></dd>
+      </dl>
+      <button class="btn" id="btn-signout" type="button">Выйти</button>
+      <p class="hint">Выход освобождает привязку браузера и считается сбросом: их не больше двух в месяц.</p>
+      <p class="notice" id="signout-notice" hidden></p>
     </div>
 
-    <footer class="start-foot">
-      <span id="version-start"></span>
-    </footer>
+    <footer class="start-foot"><span id="version-start"></span></footer>
   </div>
 </section>
 
-<!-- Экран 2: просмотр. Каркас: панели-заглушки, панель инструментов выключена. -->
+<!-- Экран просмотра. Пока каркас: панели-заглушки, инструменты выключены. -->
 <section class="screen" id="screen-viewer" data-screen="viewer" hidden>
 
   <header class="topbar">
@@ -117,16 +192,26 @@
   <div class="plate" id="plate" hidden></div>
 </section>
 
+<!-- Место занято другим устройством. Поверх всего: снимок смотрят не здесь. -->
+<div class="sheet" id="seat-sheet" hidden role="alertdialog" aria-labelledby="seat-title">
+  <div class="sheet-card">
+    <div class="card-title" id="seat-title">Vidi открыт в другом месте</div>
+    <p class="notice" id="seat-text"></p>
+    <p class="hint">Подписка рассчитана на одного врача: снимок открыт в одном месте за раз.</p>
+    <button class="btn btn-primary" id="seat-claim" type="button">Перенести сюда</button>
+  </div>
+</div>
+
 <!-- Сообщение об ошибке. На экран выводится код; наружу ничего не отправляется. -->
-<div class="error-sheet" id="error-sheet" hidden role="alertdialog" aria-labelledby="error-title">
-  <div class="error-card">
+<div class="sheet" id="error-sheet" hidden role="alertdialog" aria-labelledby="error-title">
+  <div class="sheet-card">
     <div class="card-title" id="error-title">Не получилось</div>
-    <p class="error-text" id="error-text"></p>
+    <p class="notice" id="error-text"></p>
     <p class="hint">Код ошибки <code id="error-code"></code>. Назовите его в поддержке — он не содержит данных пациента.</p>
     <button class="btn" id="error-close" type="button">Понятно</button>
   </div>
 </div>
 
-<script type="module" src="app.js?v=1"></script>
+<script type="module" src="app.js?v=2"></script>
 </body>
 </html>

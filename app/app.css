@@ -349,9 +349,73 @@ body {
   pointer-events: none;
 }
 
-/* ─── Ошибка ────────────────────────────────────────────────────────────── */
+/* ─── Формы ─────────────────────────────────────────────────────────────── */
 
-.error-sheet {
+.center-note {
+  margin: auto;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.field { display: grid; gap: 6px; }
+.field-name { color: var(--ink2); font-size: 14px; }
+
+.field input {
+  appearance: none;
+  min-height: var(--tap);
+  padding: 11px 14px;
+  border: 1px solid var(--hair);
+  border-radius: 11px;
+  background: rgba(0, 0, 0, .25);
+  color: var(--ink);
+  /* 16px обязателен: при меньшем размере Safari на iPhone масштабирует всю
+     страницу, как только палец попадает в поле. */
+  font: inherit;
+  font-size: 16px;
+}
+.field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.field input::placeholder { color: var(--ink3); }
+
+/* Разрядка и заглавные — только для набранного кода: подсказка «8 символов»
+   от них превращалась в «8 СИМВОЛОВ» и читалась как часть кода. */
+#login-code { letter-spacing: .12em; text-transform: uppercase; }
+#login-code::placeholder { letter-spacing: normal; text-transform: none; }
+
+.agree {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  color: var(--ink2);
+  font-size: 14px;
+  cursor: pointer;
+}
+.agree input {
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+.agree a { color: var(--accent); }
+
+.notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+/* ─── Поверх всего: место занято, ошибка ────────────────────────────────── */
+
+.sheet {
   position: fixed;
   inset: 0;
   z-index: 50;
@@ -363,7 +427,7 @@ body {
   -webkit-backdrop-filter: blur(6px);
 }
 
-.error-card {
+.sheet-card {
   width: 100%;
   max-width: 420px;
   display: grid;
@@ -373,8 +437,6 @@ body {
   border-radius: var(--radius);
   background: var(--panel);
 }
-
-.error-text { margin: 0; color: var(--ink2); }
 
 code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
