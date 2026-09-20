@@ -12,9 +12,10 @@
 import {
   auth, activate, check, signOut, seat, storageWorks, describeHolder, SEAT_PING_MS,
 } from './auth.js?v=2';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=1';
 
-const VERSION = '0.2.0';
-const STAGE = 'вход';
+const VERSION = '0.3.0';
+const STAGE = 'архивы';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
 
@@ -75,6 +76,7 @@ const screens = {
   login: $('screen-login'),
   blocked: $('screen-blocked'),
   start: $('screen-start'),
+  open: $('screen-open'),
   viewer: $('screen-viewer'),
 };
 
@@ -467,11 +469,77 @@ if (resizeObserver) for (const pane of panes) resizeObserver.observe(pane);
 window.addEventListener('resize', layoutAllPanes);
 window.addEventListener('orientationchange', () => setTimeout(layoutAllPanes, 200));
 
-$('btn-open').addEventListener('click', () => {
+// ─── Открытие архива ───────────────────────────────────────────────────────
+
+const fileInput = $('file-input');
+
+$('btn-open').addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files?.[0];
+  // Сбрасываем сразу: иначе повторный выбор того же файла не даёт события.
+  fileInput.value = '';
+  if (file) runOpen(file);
+});
+
+function showOpenProgress(stats) {
+  const fraction = progressOf(stats);
+  const bar = $('open-bar');
+  if (fraction === null) {
+    bar.classList.add('is-unknown');
+    bar.style.width = '';
+  } else {
+    bar.classList.remove('is-unknown');
+    bar.style.width = Math.round(fraction * 100) + '%';
+  }
+  $('open-found').textContent = String(stats.dicom ?? 0);
+  const sec = Math.round((stats.elapsedMs ?? 0) / 1000);
+  $('open-time').textContent = sec + ' с';
+}
+
+let openAbort = null;
+
+async function runOpen(file) {
+  openAbort?.abort();
+  openAbort = new AbortController();
+  const abort = openAbort;
+  showScreen('open');
+  $('open-title').textContent = 'Открываем архив';
+  showOpenProgress({ dicom: 0, elapsedMs: 0 });
+
+  // Распаковка идёт в отдельном потоке, поэтому сигнал «я открыт» продолжает
+  // уходить раз в 45 секунд. Иначе долгий архив выглядел бы как простой, и
+  // место отдали бы другому устройству прямо посреди работы.
+  try {
+    const stats = await openArchive(file, {
+      onProgress: showOpenProgress,
+      signal: abort.signal,
+    });
+    showFoundStudy(stats);
+  } catch (e) {
+    if (e instanceof ArchiveCancelled) return; // экран уже вернули по нажатию
+    showScreen('start');
+    if (e instanceof ArchiveError) showError(e.code, e.text);
+    else showError('ARC-0', 'Не удалось открыть архив.', e);
+  } finally {
+    if (openAbort === abort) openAbort = null;
+  }
+}
+
+/** Пока просмотра нет — показываем, что именно найдено в архиве. */
+function showFoundStudy(stats) {
   showScreen('viewer');
+  const mb = (bytes) => (bytes / 1048576).toFixed(0);
+  $('patient').textContent = 'Снимков: ' + stats.dicom;
   const plate = $('plate');
-  plate.textContent = 'Каркас без снимка. Открытие архива и просмотр появятся на следующих этапах.';
+  plate.textContent = 'Найдено ' + stats.dicom + ' снимков DICOM, ' + mb(stats.dicomBytes) +
+    ' МБ. Разбор снимков и построение объёма — на следующих этапах.';
   plate.hidden = false;
+}
+
+$('open-cancel').addEventListener('click', () => {
+  openAbort?.abort();
+  showScreen('start');
 });
 
 $('btn-back').addEventListener('click', () => showScreen('start'));

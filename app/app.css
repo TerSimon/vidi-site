@@ -413,6 +413,37 @@ body {
   font-size: 14px;
 }
 
+/* ─── Распаковка ────────────────────────────────────────────────────────── */
+
+.open-card { width: min(92vw, 380px); text-align: left; }
+
+.bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface2);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width .25s linear;
+}
+
+/* Пока архив не прочитан, доля неизвестна: показываем движение, а не ложные
+   проценты — врач по ним решает, ждать ему или устройство зависло. */
+.bar-fill.is-unknown {
+  width: 35%;
+  animation: bar-slide 1.4s ease-in-out infinite;
+}
+
+@keyframes bar-slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(286%); }
+}
+
 /* ─── Поверх всего: место занято, ошибка ────────────────────────────────── */
 
 .sheet {

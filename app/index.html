@@ -98,6 +98,9 @@
 
     <div class="card">
       <button class="btn btn-primary" id="btn-open" type="button">Открыть КТ</button>
+      <!-- accept не ставим: архивы из клиник приходят с любым расширением, а
+           формат всё равно определяется по содержимому, а не по имени. -->
+      <input type="file" id="file-input" hidden>
       <p class="hint" id="open-hint">Архив открывается на этом устройстве и никуда не отправляется.</p>
     </div>
 
@@ -112,6 +115,22 @@
     </div>
 
     <footer class="start-foot"><span id="version-start"></span></footer>
+  </div>
+</section>
+
+<!-- Распаковка архива. -->
+<section class="screen" id="screen-open" data-screen="open" hidden>
+  <div class="center-note">
+    <div class="card open-card">
+      <div class="card-title" id="open-title">Открываем архив</div>
+      <div class="bar"><div class="bar-fill" id="open-bar"></div></div>
+      <dl class="rows">
+        <dt>Найдено снимков</dt><dd id="open-found">0</dd>
+        <dt>Прошло</dt><dd id="open-time">0 с</dd>
+      </dl>
+      <p class="hint">Архив распаковывается на этом устройстве. Не закрывайте вкладку.</p>
+      <button class="btn" id="open-cancel" type="button">Отмена</button>
+    </div>
   </div>
 </section>
 
