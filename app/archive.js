@@ -86,6 +86,7 @@ export function openArchive(file, { onProgress, signal } = {}) {
       if (data.type === 'progress') { onProgress?.(data.stats); return; }
       if (data.type === 'done') {
         const stats = data.stats;
+        const study = data.study;
         if (stats.dicom === 0) {
           // Пустой результат — не ошибка распаковки, и путать их нельзя:
           // врачу важно, снимков нет или архив не открылся.
@@ -94,7 +95,14 @@ export function openArchive(file, { onProgress, signal } = {}) {
             : new ArchiveError('ARC-8', 'В архиве нет снимков КТ.'));
           return;
         }
-        finish(resolve, stats);
+        if (!study?.series?.length) {
+          // Снимки нашлись, но ни один заголовок не прочитался. Это другой
+          // случай, чем пустой архив, и говорить о нём надо иначе.
+          finish(reject, new ArchiveError('ARC-10',
+            'Снимки в архиве есть, но Vidi не смог их прочитать.'));
+          return;
+        }
+        finish(resolve, { stats, study });
         return;
       }
       if (data.type === 'failed') finish(reject, explain(String(data.reason || '')));

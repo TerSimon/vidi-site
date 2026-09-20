@@ -26,6 +26,7 @@
 
   --danger: #DC3232;
   --safe: #99F299;
+  --amber: #FFC400;
 
   --glass: rgba(13, 16, 23, .66);
   --panel: rgba(15, 18, 26, .88);
@@ -97,6 +98,10 @@ body {
 }
 
 .lead { margin: 0; color: var(--ink2); }
+
+/* Имя пациента стоит на месте заголовка, но длинное русское имя в размере
+   логотипа занимает две строки и съедает экран телефона. */
+.wordmark.is-name { font-size: 26px; line-height: 1.2; }
 
 .card {
   background: var(--panel);
@@ -443,6 +448,35 @@ body {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(286%); }
 }
+
+/* ─── Список серий ──────────────────────────────────────────────────────── */
+
+.series { display: grid; gap: 8px; }
+
+.series-item {
+  appearance: none;
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 12px 14px;
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.series-item:hover { background: var(--surface); }
+.series-item.is-chosen {
+  border-color: var(--accent);
+  background: rgba(79, 156, 255, .14);
+}
+
+.series-name { font-weight: 600; }
+.series-meta { color: var(--ink2); font-size: 13px; font-variant-numeric: tabular-nums; }
+.series-warn { color: var(--amber); font-size: 13px; }
 
 /* ─── Поверх всего: место занято, ошибка ────────────────────────────────── */
 

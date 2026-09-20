@@ -13,13 +13,19 @@
 // Наружу уходят только числа. Имена файлов и текст ошибок 7-Zip не передаются:
 // в архивах КТ в них часто стоит фамилия пациента.
 //
-// Найденные DICOM отдаются через handleDicom. Сейчас он их считает и сразу
-// отпускает — держать в памяти весь распакованный архив нельзя: на телефоне
-// это сотни мегабайт сверх самого объёма КТ, который ещё предстоит построить.
-// Разбор заголовков и сборка объёма подключаются сюда на следующих этапах.
+// У каждого найденного DICOM читается заголовок, после чего файл отпускается:
+// держать в памяти весь распакованный архив нельзя — это сотни мегабайт сверх
+// объёма КТ, который ещё предстоит построить. Из заголовков собирается опись
+// серий; пиксели заливаются в объём вторым проходом, уже зная геометрию.
+//
+// Имя пациента из заголовка на страницу уходит — врач должен видеть, чей
+// снимок открыт. Устройство оно при этом не покидает: страница ничего не
+// отправляет. А вот имена файлов остаются здесь: в них та же фамилия, и в
+// интерфейсе они не нужны.
 
 import './vendor/zip.min.js';
 import SevenZip from './vendor/7zz.es6.js';
+import { readDicomHeader } from './dicom.js?v=1';
 
 const zip = globalThis.zip;
 zip.configure({ useWebWorkers: false });
@@ -50,6 +56,9 @@ function newStats() {
     entriesTotal: 0,
     dicom: 0,
     dicomBytes: 0,
+    truncated: 0,
+    unreadable: 0,
+    duplicates: 0,
     other: 0,
     nested: 0,
     encrypted: 0,
@@ -210,13 +219,119 @@ function account({ kind, size, bytes }) {
   return null;
 }
 
-// Точка, куда позже встанет разбор DICOM. Ссылку на данные здесь не сохраняем:
-// как только функция вернулась, распакованный файл может быть освобождён.
+// Опись: серии по SeriesInstanceUID, внутри — срезы без повторов.
+let study;
+
+function newStudy() {
+  return { patientName: '', patientID: '', studyDate: '', studyUID: '', series: new Map() };
+}
+
+/**
+ * Заголовок прочитан — данные снимка больше не нужны. Ссылку на bytes здесь не
+ * сохраняем: как только функция вернулась, распакованный файл освобождается.
+ */
 function handleDicom(bytes, size) {
   if (!bytes || bytes.length === 0) return;
-  // Проверяем, что файл действительно дочитан: 7-Zip может закрыть поток
-  // раньше, и тогда «найден DICOM» был бы неправдой.
-  if (bytes.length < size) stats.truncated = (stats.truncated ?? 0) + 1;
+  // 7-Zip может закрыть поток раньше времени; тогда «найден снимок» было бы
+  // неправдой, и такой файл в опись не идёт.
+  if (bytes.length < size) { stats.truncated++; return; }
+
+  let h;
+  try {
+    h = readDicomHeader(bytes);
+  } catch (e) {
+    h = null;
+  }
+  if (!h) { stats.unreadable++; return; }
+
+  if (!study.patientName && h.patientName) study.patientName = h.patientName;
+  if (!study.patientID && h.patientID) study.patientID = h.patientID;
+  if (!study.studyDate && h.studyDate) study.studyDate = h.studyDate;
+  if (!study.studyUID && h.studyUID) study.studyUID = h.studyUID;
+
+  // Серия без UID — своя на файл: склеивать такие в одну значит смешать
+  // снимки разных исследований.
+  const key = h.seriesUID || `no-uid-${stats.dicom}`;
+  let series = study.series.get(key);
+  if (!series) {
+    series = {
+      uid: key,
+      description: h.seriesDescription,
+      number: h.seriesNumber,
+      imageType: h.imageType,
+      rows: h.rows, columns: h.columns,
+      bitsAllocated: h.bitsAllocated,
+      signed: h.signed,
+      samples: h.samples,
+      monochrome1: h.monochrome1,
+      compressed: h.compressed,
+      transferSyntax: h.transferSyntax,
+      pixelSpacing: h.pixelSpacing,
+      sliceThickness: h.sliceThickness,
+      orientation: h.orientation,
+      slope: h.slope,
+      intercept: h.intercept,
+      sops: new Set(),
+      slices: [],
+    };
+    study.series.set(key, series);
+  }
+
+  // Повтор того же SOP Instance UID — это один и тот же срез, пересохранённый
+  // в архиве дважды. В объёме он стал бы лишним слоем.
+  if (h.sopUID) {
+    if (series.sops.has(h.sopUID)) { stats.duplicates++; return; }
+    series.sops.add(h.sopUID);
+  }
+
+  series.slices.push({
+    sop: h.sopUID,
+    instance: h.instanceNumber,
+    position: h.position,
+    frames: h.frames,
+    pixelAt: h.pixelAt,
+    pixelLength: h.pixelLength,
+  });
+}
+
+/** Насколько серия похожа на ту самую КТ, а не на служебный экспорт. */
+function seriesRank(s) {
+  let rank = 0;
+  // 16 бит и много срезов — признак объёма, а не пары скриншотов, которые
+  // Sidexis кладёт рядом и которые раньше открывались вместо исследования.
+  if (s.bitsAllocated === 16) rank += 100;
+  if (s.slices.length >= 10) rank += 100;
+  if (/ORIGINAL/.test(s.imageType)) rank += 20;
+  if (/PRIMARY/.test(s.imageType)) rank += 10;
+  // Производные пересчёты (корональная, сагиттальная развёртка) бывают крупнее
+  // исходной серии, но открывать надо исходную.
+  if (/DERIVED|SECONDARY|REFORMAT/.test(s.imageType)) rank -= 40;
+  return rank;
+}
+
+/** Опись для страницы: без множеств и без списков срезов. */
+function studySummary() {
+  const list = [...study.series.values()].map((s) => ({
+    uid: s.uid,
+    description: s.description,
+    number: s.number,
+    slices: s.slices.length,
+    rows: s.rows,
+    columns: s.columns,
+    bitsAllocated: s.bitsAllocated,
+    compressed: s.compressed,
+    transferSyntax: s.transferSyntax,
+    pixelSpacing: s.pixelSpacing,
+    sliceThickness: s.sliceThickness,
+    rank: seriesRank(s),
+  }));
+  list.sort((a, b) => b.rank - a.rank || b.slices - a.slices);
+  return {
+    patientName: study.patientName,
+    patientID: study.patientID,
+    studyDate: study.studyDate,
+    series: list,
+  };
 }
 
 class SinkWriter extends zip.Writer {
@@ -464,12 +579,13 @@ async function readAny(source, depth) {
 
 self.onmessage = async ({ data }) => {
   stats = newStats();
+  study = newStudy();
   stats.archiveBytes = data.file.size;
   debugGc = data.debugGc === true;
   readAheadBytes = data.noReadAhead === true ? 0 : 16 * 1048576;
   try {
     await readAny(data.file, 0);
-    post('done');
+    post('done', { study: studySummary() });
   } catch (e) {
     const reason = String(e?.message || e).slice(0, 60);
     post('failed', { reason: /^[\w:.-]+$/.test(reason) ? reason : 'exception' });

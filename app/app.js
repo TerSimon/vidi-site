@@ -14,8 +14,8 @@ import {
 } from './auth.js?v=2';
 import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=1';
 
-const VERSION = '0.3.0';
-const STAGE = 'архивы';
+const VERSION = '0.4.0';
+const STAGE = 'снимки';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
 
@@ -77,6 +77,7 @@ const screens = {
   blocked: $('screen-blocked'),
   start: $('screen-start'),
   open: $('screen-open'),
+  study: $('screen-study'),
   viewer: $('screen-viewer'),
 };
 
@@ -511,11 +512,11 @@ async function runOpen(file) {
   // уходить раз в 45 секунд. Иначе долгий архив выглядел бы как простой, и
   // место отдали бы другому устройству прямо посреди работы.
   try {
-    const stats = await openArchive(file, {
+    const found = await openArchive(file, {
       onProgress: showOpenProgress,
       signal: abort.signal,
     });
-    showFoundStudy(stats);
+    showFoundStudy(found);
   } catch (e) {
     if (e instanceof ArchiveCancelled) return; // экран уже вернули по нажатию
     showScreen('start');
@@ -526,23 +527,124 @@ async function runOpen(file) {
   }
 }
 
-/** Пока просмотра нет — показываем, что именно найдено в архиве. */
-function showFoundStudy(stats) {
-  showScreen('viewer');
-  const mb = (bytes) => (bytes / 1048576).toFixed(0);
-  $('patient').textContent = 'Снимков: ' + stats.dicom;
-  const plate = $('plate');
-  plate.textContent = 'Найдено ' + stats.dicom + ' снимков DICOM, ' + mb(stats.dicomBytes) +
-    ' МБ. Разбор снимков и построение объёма — на следующих этапах.';
-  plate.hidden = false;
+// ─── Что нашлось в архиве ──────────────────────────────────────────────────
+
+let foundStudy = null;
+let chosenSeries = null;
+
+/** Имя из DICOM: «Иванов^Иван^Иванович» — это разделители, а не знаки. */
+function personName(raw) {
+  const name = (raw || '').split('^').map((p) => p.trim()).filter(Boolean).join(' ');
+  return name || 'Без имени';
 }
+
+/** Дата исследования приходит как ГГГГММДД. */
+function studyDate(raw) {
+  if (!/^\d{8}$/.test(raw || '')) return '';
+  const d = new Date(Number(raw.slice(0, 4)), Number(raw.slice(4, 6)) - 1, Number(raw.slice(6, 8)));
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+    .replace(/\s*г\.\s*$/, '');
+}
+
+function seriesTitle(s) {
+  if (s.description) return s.description;
+  if (s.number !== null && s.number !== undefined) return 'Серия ' + s.number;
+  return 'Серия без названия';
+}
+
+/** Почему серию нельзя открыть. null — можно. */
+function seriesBlocker(s) {
+  if (s.bitsAllocated !== 16) return 'Не объём КТ: ' + s.bitsAllocated + '-битные снимки.';
+  if (s.compressed) return 'Снимки сжаты — Vidi в браузере пока их не разбирает.';
+  if (s.slices < 10) return 'Слишком мало срезов для объёма.';
+  return null;
+}
+
+function showFoundStudy(found) {
+  foundStudy = found;
+  const study = found.study;
+
+  $('study-patient').textContent = personName(study.patientName);
+  const date = studyDate(study.studyDate);
+  const total = found.stats.dicom;
+  $('study-sub').textContent = [date, 'снимков: ' + total].filter(Boolean).join(' · ');
+
+  const list = $('series-list');
+  list.textContent = '';
+  chosenSeries = null;
+
+  for (const s of study.series) {
+    const blocker = seriesBlocker(s);
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'series-item';
+    item.disabled = !!blocker;
+
+    const name = document.createElement('div');
+    name.className = 'series-name';
+    name.textContent = seriesTitle(s);
+
+    const meta = document.createElement('div');
+    meta.className = 'series-meta';
+    const size = s.columns && s.rows ? s.columns + '×' + s.rows : '';
+    meta.textContent = [s.slices + ' ' + plural(s.slices, 'срез', 'среза', 'срезов'), size]
+      .filter(Boolean).join(' · ');
+
+    item.append(name, meta);
+    if (blocker) {
+      const warn = document.createElement('div');
+      warn.className = 'series-warn';
+      warn.textContent = blocker;
+      item.append(warn);
+    } else if (!chosenSeries) {
+      // Список уже отсортирован: первая пригодная и есть та самая КТ.
+      chosenSeries = s;
+      item.classList.add('is-chosen');
+    }
+
+    item.addEventListener('click', () => {
+      chosenSeries = s;
+      for (const el of list.children) el.classList.remove('is-chosen');
+      item.classList.add('is-chosen');
+      updateStudyHint();
+    });
+
+    list.append(item);
+  }
+
+  updateStudyHint();
+  showScreen('study');
+}
+
+function updateStudyHint() {
+  const openable = !!chosenSeries;
+  $('study-open').disabled = !openable;
+  $('series-hint').textContent = openable
+    ? 'Открывается выбранная серия. Остальные — служебные снимки из того же архива.'
+    : 'В этом архиве нет серии, которую Vidi может открыть.';
+}
+
+$('study-back').addEventListener('click', () => showScreen('start'));
+
+$('study-open').addEventListener('click', () => {
+  if (!chosenSeries) return;
+  showScreen('viewer');
+  $('patient').textContent = personName(foundStudy.study.patientName);
+  const plate = $('plate');
+  plate.textContent = seriesTitle(chosenSeries) + ': ' + chosenSeries.slices + ' ' +
+    plural(chosenSeries.slices, 'срез', 'среза', 'срезов') + ', ' +
+    chosenSeries.columns + '×' + chosenSeries.rows +
+    '. Построение объёма — на следующем этапе.';
+  plate.hidden = false;
+});
 
 $('open-cancel').addEventListener('click', () => {
   openAbort?.abort();
   showScreen('start');
 });
 
-$('btn-back').addEventListener('click', () => showScreen('start'));
+$('btn-back').addEventListener('click', () => showScreen(foundStudy ? 'study' : 'start'));
 
 // ─── Запуск ────────────────────────────────────────────────────────────────
 
