@@ -620,9 +620,37 @@ function showFoundStudy(found) {
 function updateStudyHint() {
   const openable = !!chosenSeries;
   $('study-open').disabled = !openable;
-  $('series-hint').textContent = openable
-    ? 'Открывается выбранная серия. Остальные — служебные снимки из того же архива.'
+
+  const many = (foundStudy?.study.series.length ?? 0) > 1;
+  let hint = openable
+    ? (many
+      ? 'Открывается выбранная серия. Остальные — служебные снимки из того же архива.'
+      : 'В архиве одна серия — она и откроется.')
     : 'В этом архиве нет серии, которую Vidi может открыть.';
+
+  // Снимки, не попавшие ни в одну серию, называем вслух. Молчаливая разница
+  // между «найдено 451» и «в серии 450» выглядит как потерянный срез, и врач
+  // вправе знать, повтор это или файл, который не прочитался.
+  const skipped = dropped(foundStudy?.stats);
+  if (skipped) hint += ' ' + skipped;
+
+  $('series-hint').textContent = hint;
+}
+
+/** Куда делись снимки, не попавшие в серии. */
+function dropped(stats) {
+  if (!stats) return '';
+  const parts = [];
+  if (stats.duplicates > 0) {
+    parts.push(stats.duplicates + ' ' +
+      plural(stats.duplicates, 'повтор', 'повтора', 'повторов') + ' отброшено');
+  }
+  const broken = (stats.unreadable ?? 0) + (stats.truncated ?? 0);
+  if (broken > 0) {
+    parts.push(broken + ' ' +
+      plural(broken, 'снимок', 'снимка', 'снимков') + ' не прочиталось');
+  }
+  return parts.length ? parts.join(', ') + '.' : '';
 }
 
 $('study-back').addEventListener('click', () => showScreen('start'));
