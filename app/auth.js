@@ -178,10 +178,26 @@ export async function activate(email, code) {
   switch (r.status) {
     case 'bad_code': return { result: 'badCode' };
     case 'not_found': return { result: 'notFound' };
-    case 'device_limit': return { result: 'deviceLimit', resetsLeft: r.resets_left ?? 0 };
+    case 'device_limit': return {
+      result: 'deviceLimit',
+      resetsLeft: r.resets_left ?? 0,
+      bound: boundDevice(r.devices),
+    };
     case 'too_many_attempts': return { result: 'tooManyAttempts', retryAfter: r.retry_after ?? null };
     default: return { result: 'error' };
   }
+}
+
+/**
+ * Кто сейчас держит слот. Сервер присылает имя устройства и когда оно
+ * заходило; врачу это важнее самого отказа: по имени и времени видно, свой
+ * это браузер (тот же, где вход потерялся) или чужой.
+ */
+function boundDevice(devices) {
+  const d = Array.isArray(devices) ? devices[0] : null;
+  if (!d) return null;
+  const name = (d.device_name ?? '').trim();
+  return { name: name || 'браузер', lastSeen: d.last_seen ?? null };
 }
 
 /** Проверка при открытии страницы: жив ли ещё доступ. */

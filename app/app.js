@@ -44,6 +44,22 @@ function formatDate(iso) {
     .replace(/\s*г\.\s*$/, '');
 }
 
+/**
+ * Когда устройство заходило в последний раз. Точное время сегодняшнего входа
+ * отвечает на главный вопрос врача: это я сам полчаса назад или кто-то другой.
+ */
+function whenSeen(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  const day = new Date(d); day.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.round((today - day) / 86400000);
+  if (days === 0) return 'сегодня в ' + time;
+  if (days === 1) return 'вчера в ' + time;
+  return formatDate(iso);
+}
+
 // ─── Ошибки ────────────────────────────────────────────────────────────────
 
 const errorSheet = $('error-sheet');
@@ -226,13 +242,22 @@ loginForm.addEventListener('submit', async (e) => {
     case 'notFound':
       setNotice(loginNotice, 'Такой почты нет. Проверьте адрес или зарегистрируйтесь в боте.');
       break;
-    case 'deviceLimit':
-      setNotice(loginNotice, 'К этой подписке уже привязан другой браузер. ' +
+    case 'deviceLimit': {
+      // Чаще всего сюда упирается не чужой браузер, а свой же: Safari очистил
+      // данные сайта, вход потерялся, и тот же телефон пришёл под новым
+      // номером. Поэтому называем, кто держит слот и когда заходил — иначе
+      // отказ выглядит так, будто подписку кто-то занял.
+      const who = r.bound
+        ? 'Занят: ' + r.bound.name +
+          (r.bound.lastSeen ? ', заходил ' + whenSeen(r.bound.lastSeen) : '') + '. '
+        : '';
+      setNotice(loginNotice, 'К этой подписке уже привязан другой браузер. ' + who +
         'Отвяжите его кнопкой в боте — ' +
         (r.resetsLeft > 0
           ? 'осталось ' + r.resetsLeft + ' ' + plural(r.resetsLeft, 'сброс', 'сброса', 'сбросов') + ' в этом месяце.'
           : 'сбросы в этом месяце закончились.'));
       break;
+    }
     case 'tooManyAttempts': {
       const min = r.retryAfter ? Math.ceil(r.retryAfter / 60) : null;
       setNotice(loginNotice, min
@@ -647,8 +672,11 @@ function dropped(stats) {
   }
   const broken = (stats.unreadable ?? 0) + (stats.truncated ?? 0);
   if (broken > 0) {
+    // Согласование меняется вместе с числом: «1 снимок не прочитался»,
+    // «2 снимка не прочитались», «5 снимков не прочиталось».
     parts.push(broken + ' ' +
-      plural(broken, 'снимок', 'снимка', 'снимков') + ' не прочиталось');
+      plural(broken, 'снимок', 'снимка', 'снимков') + ' не ' +
+      plural(broken, 'прочитался', 'прочитались', 'прочиталось'));
   }
   return parts.length ? parts.join(', ') + '.' : '';
 }

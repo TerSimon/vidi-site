@@ -58,6 +58,7 @@ function newStats() {
     dicomBytes: 0,
     truncated: 0,
     unreadable: 0,
+    indexFiles: 0,
     duplicates: 0,
     other: 0,
     nested: 0,
@@ -243,6 +244,8 @@ function handleDicom(bytes, size) {
     h = null;
   }
   if (!h) { stats.unreadable++; return; }
+  // Оглавление архива — не срез: в опись оно не идёт и тревоги не вызывает.
+  if (h.directory) { stats.indexFiles++; return; }
 
   if (!study.patientName && h.patientName) study.patientName = h.patientName;
   if (!study.patientID && h.patientID) study.patientID = h.patientID;

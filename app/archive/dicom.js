@@ -23,6 +23,11 @@ const TAG_ITEM_END = 0xfffee00d;
 const TAG_SEQ_END = 0xfffee0dd;
 const TAG_PIXEL_DATA = 0x7fe00010;
 
+// Оглавление архива (DICOMDIR). Это полноценный файл DICOM с той же меткой в
+// начале, но снимка в нём нет — только список того, что лежит рядом. Принимать
+// его за испорченный срез нельзя: врач получит тревогу на ровном месте.
+const SOP_DICOMDIR = '1.2.840.10008.1.3.10';
+
 const TS_IMPLICIT_LE = '1.2.840.10008.1.2';
 const TS_EXPLICIT_LE = '1.2.840.10008.1.2.1';
 const TS_EXPLICIT_BE = '1.2.840.10008.1.2.2';
@@ -135,14 +140,18 @@ export function readDicomHeader(bytes) {
   // Группа 0002 всегда записана явным VR с прямым порядком байт, независимо
   // от того, в каком синтаксисе лежит всё остальное.
   let transferSyntax = TS_IMPLICIT_LE;
+  let mediaClass = '';
   while (r.left >= 8) {
     const save = r.at;
     const el = readElement(r, true, true);
     if (!el || (el.tag >>> 16) !== 0x0002) { r.at = save; break; }
+    if (el.tag === tagOf(0x0002, 0x0002)) mediaClass = r.ascii(el.length).replace(/\0+$/, '').trim();
     if (el.tag === tagOf(0x0002, 0x0010)) transferSyntax = r.ascii(el.length).replace(/\0+$/, '').trim();
     r.at = el.dataAt + el.length;
     if (r.at > bytes.length) return null;
   }
+
+  if (mediaClass === SOP_DICOMDIR) return { directory: true };
 
   const explicit = transferSyntax !== TS_IMPLICIT_LE;
   const le = transferSyntax !== TS_EXPLICIT_BE;
