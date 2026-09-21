@@ -203,19 +203,22 @@ export function angleDeg(g, a, b, c) {
 /**
  * Геометрия объёма, уменьшенного под память устройства.
  *
- * Точка становится крупнее ровно во столько раз, во сколько ужали — и это
+ * Шаг поперёк среза и шаг по срезам разные: выбрасывать срезы дороже, чем
+ * огрублять картинку внутри среза. По срезам меряют высоту кости над каналом,
+ * и потерянный срез — это потерянные 0.2 мм там, где их считают.
+ *
+ * Точка становится крупнее ровно во столько раз, во сколько ужали, и это
  * записано здесь же. Поэтому линейка на уменьшенном объёме показывает те же
- * миллиметры; крупнее становится шаг, которым можно ставить точку, и об этом
- * на экране говорится вслух.
+ * миллиметры; крупнее становится шаг, которым можно ставить точку.
  */
-export function reduced(g, step) {
-  if (step === 1) return g;
+export function reduced(g, stepXY, stepZ = stepXY) {
+  if (stepXY === 1 && stepZ === 1) return g;
   return {
     ...g,
-    columns: Math.ceil(g.columns / step),
-    rows: Math.ceil(g.rows / step),
-    slices: Math.ceil(g.slices / step),
-    voxel: { i: g.voxel.i * step, j: g.voxel.j * step, k: g.voxel.k * step },
+    columns: Math.ceil(g.columns / stepXY),
+    rows: Math.ceil(g.rows / stepXY),
+    slices: Math.ceil(g.slices / stepZ),
+    voxel: { i: g.voxel.i * stepXY, j: g.voxel.j * stepXY, k: g.voxel.k * stepZ },
   };
 }
 

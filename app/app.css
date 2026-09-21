@@ -349,6 +349,27 @@ body {
 .tool svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Плашка поверх снимка: «Разрешение 0,4 мм», предупреждения. */
+/*
+  Метка оговорки: объём ужат или геометрии нет. Подпись целиком закрывает
+  снимок, поэтому она гаснет, а метка остаётся — по касанию показывает текст
+  снова. Молчать про ужатый объём нельзя, закрывать им анатомию — тоже.
+*/
+.plate-badge {
+  position: absolute;
+  right: calc(10px + var(--safe-right));
+  bottom: calc(var(--tap) + 24px + var(--safe-bottom));
+  appearance: none;
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--amber) 14%, var(--panel));
+  color: var(--amber);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .plate {
   position: absolute;
   left: 50%;

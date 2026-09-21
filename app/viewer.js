@@ -10,10 +10,10 @@
 //  телефона и уменьшение объёма под память их не сдвигают.
 //
 
-import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.4.2';
-import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen } from './planes.js?v=0.4.2';
-import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.4.2';
-import { buildVolume } from './archive.js?v=0.4.2';
+import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.4.3';
+import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen } from './planes.js?v=0.4.3';
+import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.4.3';
+import { buildVolume } from './archive.js?v=0.4.3';
 
 const $ = (id) => document.getElementById(id);
 
@@ -122,7 +122,8 @@ export async function showVolume(file, series, { onProgress, signal } = {}) {
     columns: series.columns,
     rows: series.rows,
     slices: geometry.order.length,
-    step: shape.step,
+    stepXY: shape.stepXY,
+    stepZ: shape.stepZ,
     order: geometry.order.map((s) => s.key),
   }, {
     onProgress: (stats, fill) => onProgress?.(fill?.filled ?? 0, fill?.total ?? shape.d, stats),
@@ -131,7 +132,7 @@ export async function showVolume(file, series, { onProgress, signal } = {}) {
 
   if (!renderer.upload(volume)) throw new Error('upload');
 
-  const g = reduced(geometry, shape.step);
+  const g = reduced(geometry, shape.stepXY, shape.stepZ);
   const dims = [volume.w, volume.h, volume.d];
   const layouts = {};
   for (const plane of PLANES) layouts[plane] = planeLayout(g, plane);
@@ -141,11 +142,11 @@ export async function showVolume(file, series, { onProgress, signal } = {}) {
     layouts,
     dims,
     series,
-    reduction: shape.step,
+    reduction: { xy: shape.stepXY, z: shape.stepZ },
     missing: volume.missing,
     histogram: volume.histogram,
     look: autoWindow(volume.histogram, series),
-    notes: notes(geometry, shape.step, volume),
+    notes: notes(g, shape, volume),
   };
   crosshair = dims.map((n) => (n - 1) / 2);
   view = {};
@@ -178,14 +179,17 @@ export function clearVolume() {
  * Что сказать врачу про этот объём вслух. Молчать здесь нельзя: и уменьшение,
  * и недостающие срезы, и отсутствие геометрии меняют то, чему можно верить.
  */
-function notes(geometry, step, volume) {
+function notes(g, shape, volume) {
   const out = [];
-  if (!geometry.mm) out.push(geometry.reason);
-  if (step > 1) {
-    const v = geometry.mm ? (geometry.voxel.i * step).toFixed(2) : null;
-    out.push('Объём уменьшен в ' + step + ' раза под память устройства' +
-      (v ? ': точка стала ' + v + ' мм' : '') +
-      '. Измерения остаются в миллиметрах, но мельче точки не прицелиться.');
+  if (!g.mm) out.push(g.reason);
+  if (shape.stepXY > 1 || shape.stepZ > 1) {
+    // Размер точки уже назван строкой выше — здесь важно другое: что объём
+    // ужали и чем это отзовётся на прицеливании.
+    const slices = shape.stepZ > 1
+      ? ' Взят каждый ' + (shape.stepZ === 2 ? 'второй' : shape.stepZ + '-й') + ' срез.'
+      : ' Все срезы на месте.';
+    out.push('Объём уменьшен под память устройства.' + slices +
+      ' Измерения остаются точными, но мельче точки не прицелиться.');
   }
   if (volume.missing > 0) {
     out.push(volume.missing + ' ' +
@@ -602,7 +606,7 @@ export function measureAt(plane, points, kind = 'ruler') {
 
 // Опоры для автоматических проверок.
 //
-// Через import их не взять: у './viewer.js?v=0.4.2' и './viewer.js?v=0.4.2'
+// Через import их не взять: у './viewer.js?v=0.4.3' и './viewer.js?v=0.4.3'
 // разные экземпляры модуля, и проверка получила бы пустой просмотр вместо
 // открытого. Номер в адресе меняется каждый выпуск, поэтому проверки
 // цепляются сюда, а не за адрес. Внутренности приложения в браузере и так

@@ -91,23 +91,42 @@ void main() {
 export const volumeBytes = (w, h, d) => w * h * d * 2;
 
 /**
- * Во сколько раз уменьшать объём, чтобы он поместился.
+ * Насколько уменьшать объём, чтобы он поместился.
  *
  * Спросить у браузера, сколько памяти даст видеокарта, нельзя — такого вопроса
  * в WebGL нет. Поэтому сначала считаем по запасу, который телефон обычно
  * выдерживает, а потом пробуем выделить текстуру на самом деле: неудачная
  * попытка стоит миллисекунды, а неудачная заливка — минуты второго прохода.
+ *
+ * Поперёк среза и по срезам ужимаем по отдельности и берём вариант с
+ * наименьшей потерей. Одним шагом на все оси получалось хуже без причины:
+ * снимок 800×800×450 не влезает целиком, но, ужатый только поперёк, занимает
+ * 137 МБ и сохраняет ВСЕ срезы, тогда как одинаковый шаг ×2 выбрасывал
+ * каждый второй срез ради 69 МБ, которые и не были нужны.
  */
 export function chooseReduction(gl, w, h, d, budgetBytes) {
   const maxDim = gl ? gl.getParameter(gl.MAX_3D_TEXTURE_SIZE) : 512;
-  for (let step = 1; step <= 8; step++) {
-    const sw = Math.ceil(w / step);
-    const sh = Math.ceil(h / step);
-    const sd = Math.ceil(d / step);
-    if (Math.max(sw, sh, sd) > maxDim) continue;
-    if (volumeBytes(sw, sh, sd) > budgetBytes) continue;
-    if (gl && !canAllocate(gl, sw, sh, sd)) continue;
-    return { step, w: sw, h: sh, d: sd };
+  const tried = [];
+  for (let xy = 1; xy <= 8; xy++) {
+    for (let z = 1; z <= 8; z++) {
+      // Слишком вытянутая точка (вдоль объёма много крупнее, чем поперёк)
+      // обманывает глаз: край на наклонном виде кажется не там, где он есть.
+      // Потому перекос ограничен вдвое.
+      if (z > xy * 2) continue;
+      const sw = Math.ceil(w / xy);
+      const sh = Math.ceil(h / xy);
+      const sd = Math.ceil(d / z);
+      if (Math.max(sw, sh, sd) > maxDim) continue;
+      if (volumeBytes(sw, sh, sd) > budgetBytes) continue;
+      // Потеря — во сколько раз крупнее стала точка объёма. При равной
+      // потере предпочитаем сохранить срезы.
+      tried.push({ stepXY: xy, stepZ: z, w: sw, h: sh, d: sd, loss: xy * xy * z });
+    }
+  }
+  tried.sort((a, b) => a.loss - b.loss || a.stepZ - b.stepZ);
+  for (const candidate of tried) {
+    if (gl && !canAllocate(gl, candidate.w, candidate.h, candidate.d)) continue;
+    return candidate;
   }
   return null;
 }
@@ -130,7 +149,7 @@ function canAllocate(gl, w, h, d) {
  */
 export function memoryBudget() {
   const phone = /iPhone|iPad|iPod|Android/.test(navigator.userAgent);
-  return (phone ? 192 : 512) * 1048576;
+  return (phone ? 192 : 768) * 1048576;
 }
 
 export class MPRRenderer {

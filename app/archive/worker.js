@@ -25,7 +25,7 @@
 
 import './vendor/zip.min.js';
 import SevenZip from './vendor/7zz.es6.js';
-import { readDicomHeader } from './dicom.js?v=0.4.2';
+import { readDicomHeader } from './dicom.js?v=0.4.3';
 
 const zip = globalThis.zip;
 zip.configure({ useWebWorkers: false });
@@ -325,10 +325,10 @@ function sliceKey(h) {
 let fill = null;
 
 function startFill(plan) {
-  const { columns, rows, slices, step } = plan;
-  const w = Math.ceil(columns / step);
-  const h = Math.ceil(rows / step);
-  const d = Math.ceil(slices / step);
+  const { columns, rows, slices, stepXY, stepZ } = plan;
+  const w = Math.ceil(columns / stepXY);
+  const h = Math.ceil(rows / stepXY);
+  const d = Math.ceil(slices / stepZ);
   fill = {
     ...plan,
     out: { w, h, d },
@@ -357,8 +357,8 @@ function fillSlice(bytes, size) {
   if (at === undefined) { fill.skipped++; return; }
   // Повтор того же среза: первый уже лёг, второй только затёр бы его собой.
   if (fill.placed.has(at)) return;
-  if (at % fill.step !== 0) { fill.placed.add(at); return; }
-  const k = at / fill.step;
+  if (at % fill.stepZ !== 0) { fill.placed.add(at); return; }
+  const k = at / fill.stepZ;
   if (k >= fill.out.d) return;
 
   const need = h.rows * h.columns * 2;
@@ -371,7 +371,7 @@ function fillSlice(bytes, size) {
 
   const src = sourceView(bytes, h.pixelAt, h.rows * h.columns, h.bigEndian);
   const { w, h: oh } = fill.out;
-  const step = fill.step;
+  const step = fill.stepXY;
   const out = fill.data;
   const hist = fill.histogram;
   const signed = h.signed;

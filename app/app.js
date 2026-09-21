@@ -11,12 +11,12 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, describeHolder, SEAT_PING_MS,
-} from './auth.js?v=0.4.2';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=0.4.2';
+} from './auth.js?v=0.4.3';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=0.4.3';
 import { attachViewer, showVolume, clearVolume, selectPlane, layoutViewer }
-  from './viewer.js?v=0.4.2';
+  from './viewer.js?v=0.4.3';
 
-const VERSION = '0.4.2';
+const VERSION = '0.4.3';
 const STAGE = 'объём';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
@@ -661,8 +661,21 @@ async function runVolume(file, series) {
   }
 }
 
+/** Ужимали ли объём под память устройства. */
+function isReduced(built) {
+  return built.reduction.xy > 1 || built.reduction.z > 1;
+}
+
 /** Что написано под панелями: чем именно врач сейчас смотрит. */
-$('plate').addEventListener('click', () => { $('plate').hidden = true; });
+// Метка — свёрнутая подпись, поэтому они не показываются вместе.
+function foldPlate(folded) {
+  $('plate').hidden = folded;
+  $('plate-badge').hidden = !folded || !plateNote;
+}
+let plateNote = false;
+
+$('plate').addEventListener('click', () => foldPlate(true));
+$('plate-badge').addEventListener('click', () => foldPlate(false));
 
 function showPlate(series, built) {
   const plate = $('plate');
@@ -673,15 +686,19 @@ function showPlate(series, built) {
   const head = seriesTitle(series) + ': ' + built.dims[2] + ' ' +
     plural(built.dims[2], 'срез', 'среза', 'срезов') + ', ' +
     built.dims[0] + '×' + built.dims[1] + size + '.';
-  const text = [head, ...built.notes].join(' ');
-  plate.textContent = text;
-  // Оговорки прячем не раньше, чем врач их увидит: спокойный объём гаснет
-  // сам, а объём с оговоркой остаётся на экране.
-  plate.hidden = false;
+  plate.textContent = [head, ...built.notes].join(' ');
+
+  // Подпись гаснет всегда: она закрывает середину снимка, а на телефоне это
+  // половина изображения. Оговорка при этом не исчезает — остаётся метка,
+  // по касанию которой текст возвращается.
+  plateNote = built.notes.length > 0;
+  $('plate-badge').textContent = built.geometry.mm
+    ? (isReduced(built) ? 'ужат · ' + built.geometry.voxel.i.toFixed(2) + ' мм'
+      : 'точка ' + built.geometry.voxel.i.toFixed(2) + ' мм')
+    : 'без масштаба';
+  foldPlate(false);
   clearTimeout(showPlate.timer);
-  if (built.notes.length === 0) {
-    showPlate.timer = setTimeout(() => { plate.hidden = true; }, 6000);
-  }
+  showPlate.timer = setTimeout(() => foldPlate(true), plateNote ? 12000 : 6000);
 }
 
 $('open-cancel').addEventListener('click', () => {
@@ -691,6 +708,9 @@ $('open-cancel').addEventListener('click', () => {
 
 $('btn-back').addEventListener('click', () => {
   clearVolume();
+  clearTimeout(showPlate.timer);
+  plateNote = false;
+  foldPlate(true);
   showScreen(foundStudy ? 'study' : 'start');
 });
 

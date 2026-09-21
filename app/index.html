@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0B0E14">
 <title>Vidi</title>
 <link rel="icon" href="/favicon.ico">
-<link rel="stylesheet" href="app.css?v=0.4.2">
+<link rel="stylesheet" href="app.css?v=0.4.3">
 </head>
 <body>
 
@@ -230,6 +230,9 @@
   </div>
 
   <div class="plate" id="plate" hidden></div>
+  <!-- Короткая метка оговорки. Остаётся на экране, когда подпись уже убрана:
+       врач должен видеть, что объём ужат, но не через весь снимок. -->
+  <button class="plate-badge" id="plate-badge" type="button" hidden></button>
 </section>
 
 <!-- Место занято другим устройством. Поверх всего: снимок смотрят не здесь. -->
@@ -252,6 +255,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=0.4.2"></script>
+<script type="module" src="app.js?v=0.4.3"></script>
 </body>
 </html>
