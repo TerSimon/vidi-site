@@ -11,11 +11,13 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, describeHolder, SEAT_PING_MS,
-} from './auth.js?v=0.4.1';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=0.4.1';
+} from './auth.js?v=0.4.2';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=0.4.2';
+import { attachViewer, showVolume, clearVolume, selectPlane, layoutViewer }
+  from './viewer.js?v=0.4.2';
 
-const VERSION = '0.4.1';
-const STAGE = 'снимки';
+const VERSION = '0.4.2';
+const STAGE = 'объём';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
 
@@ -102,7 +104,7 @@ let current = 'boot';
 function showScreen(name) {
   current = name;
   for (const [key, el] of Object.entries(screens)) el.hidden = key !== name;
-  if (name === 'viewer') layoutAllPanes();
+  if (name === 'viewer') layoutViewer();
 }
 
 // ─── Проверка браузера ─────────────────────────────────────────────────────
@@ -414,87 +416,6 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && seatTimer) pingSeat();
 });
 
-// ─── Панели просмотра ──────────────────────────────────────────────────────
-
-const panes = Array.from(document.querySelectorAll('.pane'));
-const planeTabs = Array.from(document.querySelectorAll('.plane-tab'));
-
-function selectPlane(plane) {
-  for (const pane of panes) pane.classList.toggle('is-active', pane.dataset.plane === plane);
-  for (const tab of planeTabs) {
-    const on = tab.dataset.plane === plane;
-    tab.classList.toggle('is-active', on);
-    tab.setAttribute('aria-selected', on ? 'true' : 'false');
-  }
-  layoutAllPanes();
-}
-
-for (const tab of planeTabs) {
-  tab.addEventListener('click', () => selectPlane(tab.dataset.plane));
-}
-
-/**
- * Размер canvas в пикселях устройства. Плотность режем до 2: на телефоне
- * третий пиксель уже не виден, а площадь растёт в полтора раза — это прямо
- * столько же работы на каждый кадр.
- */
-function layoutPane(pane) {
-  const canvas = pane.querySelector('.pane-canvas');
-  if (!canvas || pane.offsetParent === null) return;
-
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
-  const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
-  if (canvas.width !== w || canvas.height !== h) {
-    canvas.width = w;
-    canvas.height = h;
-  }
-  drawPlaceholder(canvas);
-}
-
-function layoutAllPanes() {
-  for (const pane of panes) layoutPane(pane);
-}
-
-/**
- * Заглушка вместо снимка: сетка и перекрестие. Нужна не для красоты — по ней
- * на телефоне сразу видно, если canvas посчитан неверно: клетки станут
- * прямоугольными, а перекрестие уедет из центра.
- */
-function drawPlaceholder(canvas) {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-
-  const { width: w, height: h } = canvas;
-  ctx.clearRect(0, 0, w, h);
-
-  const step = Math.max(24, Math.round(Math.min(w, h) / 8));
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let x = step; x < w; x += step) { ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, h); }
-  for (let y = step; y < h; y += step) { ctx.moveTo(0, y + .5); ctx.lineTo(w, y + .5); }
-  ctx.stroke();
-
-  const cx = Math.round(w / 2) + .5;
-  const cy = Math.round(h / 2) + .5;
-  const arm = Math.round(Math.min(w, h) * 0.06);
-  ctx.strokeStyle = 'rgba(79,156,255,0.5)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(cx - arm, cy); ctx.lineTo(cx + arm, cy);
-  ctx.moveTo(cx, cy - arm); ctx.lineTo(cx, cy + arm);
-  ctx.stroke();
-}
-
-// Пересчитываем при повороте телефона, изменении окна и уходе полосы Safari.
-const resizeObserver = typeof ResizeObserver === 'function'
-  ? new ResizeObserver(() => layoutAllPanes())
-  : null;
-if (resizeObserver) for (const pane of panes) resizeObserver.observe(pane);
-window.addEventListener('resize', layoutAllPanes);
-window.addEventListener('orientationchange', () => setTimeout(layoutAllPanes, 200));
-
 // ─── Открытие архива ───────────────────────────────────────────────────────
 
 const fileInput = $('file-input');
@@ -531,6 +452,7 @@ async function runOpen(file) {
   const abort = openAbort;
   showScreen('open');
   $('open-title').textContent = 'Открываем архив';
+  $('open-found-label').textContent = 'Найдено снимков';
   showOpenProgress({ dicom: 0, elapsedMs: 0 });
 
   // Распаковка идёт в отдельном потоке, поэтому сигнал «я открыт» продолжает
@@ -541,6 +463,7 @@ async function runOpen(file) {
       onProgress: showOpenProgress,
       signal: abort.signal,
     });
+    openedFile = file;
     showFoundStudy(found);
   } catch (e) {
     if (e instanceof ArchiveCancelled) return; // экран уже вернули по нажатию
@@ -556,6 +479,9 @@ async function runOpen(file) {
 
 let foundStudy = null;
 let chosenSeries = null;
+// Файл держим до конца просмотра: второй проход читает его заново, а взять
+// файл ещё раз без участия врача браузер не даёт.
+let openedFile = null;
 
 /** Имя из DICOM: «Иванов^Иван^Иванович» — это разделители, а не знаки. */
 function personName(raw) {
@@ -588,6 +514,8 @@ function seriesBlocker(s) {
 
 function showFoundStudy(found) {
   foundStudy = found;
+  // Для проверок на настоящих архивах: чем Vidi руководствовался, выбирая серию.
+  window.__vidiStudy = found.study.series;
   const study = found.study;
 
   $('study-patient').textContent = personName(study.patientName);
@@ -684,23 +612,87 @@ function dropped(stats) {
 $('study-back').addEventListener('click', () => showScreen('start'));
 
 $('study-open').addEventListener('click', () => {
-  if (!chosenSeries) return;
-  showScreen('viewer');
-  $('patient').textContent = personName(foundStudy.study.patientName);
-  const plate = $('plate');
-  plate.textContent = seriesTitle(chosenSeries) + ': ' + chosenSeries.slices + ' ' +
-    plural(chosenSeries.slices, 'срез', 'среза', 'срезов') + ', ' +
-    chosenSeries.columns + '×' + chosenSeries.rows +
-    '. Построение объёма — на следующем этапе.';
-  plate.hidden = false;
+  if (chosenSeries && openedFile) runVolume(openedFile, chosenSeries);
 });
+
+/** Второй проход: собираем объём выбранной серии и показываем его. */
+async function runVolume(file, series) {
+  openAbort?.abort();
+  openAbort = new AbortController();
+  const abort = openAbort;
+
+  showScreen('open');
+  $('open-title').textContent = 'Строим объём';
+  $('open-found-label').textContent = 'Срезов в объёме';
+  $('open-found').textContent = '0';
+  $('open-time').textContent = '0 с';
+  const bar = $('open-bar');
+  bar.classList.remove('is-unknown');
+  bar.style.width = '0%';
+
+  try {
+    const built = await showVolume(file, series, {
+      signal: abort.signal,
+      onProgress: (done, total, stats) => {
+        bar.style.width = Math.round(100 * done / Math.max(1, total)) + '%';
+        $('open-found').textContent = done + ' из ' + total;
+        $('open-time').textContent = Math.round((stats?.elapsedMs ?? 0) / 1000) + ' с';
+      },
+    });
+    showScreen('viewer');
+    selectPlane('axial');
+    $('patient').textContent = personName(foundStudy.study.patientName);
+    showPlate(series, built);
+  } catch (e) {
+    if (e instanceof ArchiveCancelled) return;
+    showScreen('study');
+    if (e instanceof ArchiveError) showError(e.code, e.text);
+    else if (e.message === 'webgl') {
+      showError('VOL-1', 'Браузер не смог подготовить отрисовку объёма.');
+    } else if (e.message === 'too-big') {
+      showError('VOL-2', 'Этот объём не помещается в память устройства даже уменьшенным.');
+    } else if (e.message === 'upload') {
+      showError('VOL-3', 'Видеокарта не приняла объём. Закройте другие вкладки и попробуйте снова.');
+    } else {
+      showError('VOL-0', 'Не удалось построить объём.', e);
+    }
+  } finally {
+    if (openAbort === abort) openAbort = null;
+  }
+}
+
+/** Что написано под панелями: чем именно врач сейчас смотрит. */
+$('plate').addEventListener('click', () => { $('plate').hidden = true; });
+
+function showPlate(series, built) {
+  const plate = $('plate');
+  const size = built.geometry.mm
+    ? ', точка ' + built.geometry.voxel.i.toFixed(2) + '×' +
+      built.geometry.voxel.j.toFixed(2) + '×' + built.geometry.voxel.k.toFixed(2) + ' мм'
+    : '';
+  const head = seriesTitle(series) + ': ' + built.dims[2] + ' ' +
+    plural(built.dims[2], 'срез', 'среза', 'срезов') + ', ' +
+    built.dims[0] + '×' + built.dims[1] + size + '.';
+  const text = [head, ...built.notes].join(' ');
+  plate.textContent = text;
+  // Оговорки прячем не раньше, чем врач их увидит: спокойный объём гаснет
+  // сам, а объём с оговоркой остаётся на экране.
+  plate.hidden = false;
+  clearTimeout(showPlate.timer);
+  if (built.notes.length === 0) {
+    showPlate.timer = setTimeout(() => { plate.hidden = true; }, 6000);
+  }
+}
 
 $('open-cancel').addEventListener('click', () => {
   openAbort?.abort();
-  showScreen('start');
+  showScreen(foundStudy ? 'study' : 'start');
 });
 
-$('btn-back').addEventListener('click', () => showScreen(foundStudy ? 'study' : 'start'));
+$('btn-back').addEventListener('click', () => {
+  clearVolume();
+  showScreen(foundStudy ? 'study' : 'start');
+});
 
 // ─── Запуск ────────────────────────────────────────────────────────────────
 
@@ -709,6 +701,8 @@ $('version-login').textContent = 'Vidi ' + versionLabel;
 $('version-start').textContent = 'Vidi ' + versionLabel;
 $('version-blocked').textContent = 'Vidi ' + versionLabel;
 $('version-viewer').textContent = versionLabel;
+
+attachViewer();
 
 async function boot() {
   showScreen('boot');

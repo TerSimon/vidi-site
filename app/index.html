@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0B0E14">
 <title>Vidi</title>
 <link rel="icon" href="/favicon.ico">
-<link rel="stylesheet" href="app.css?v=0.4.1">
+<link rel="stylesheet" href="app.css?v=0.4.2">
 </head>
 <body>
 
@@ -125,7 +125,7 @@
       <div class="card-title" id="open-title">Открываем архив</div>
       <div class="bar"><div class="bar-fill" id="open-bar"></div></div>
       <dl class="rows">
-        <dt>Найдено снимков</dt><dd id="open-found">0</dd>
+        <dt id="open-found-label">Найдено снимков</dt><dd id="open-found">0</dd>
         <dt>Прошло</dt><dd id="open-time">0 с</dd>
       </dl>
       <p class="hint">Архив распаковывается на этом устройстве. Не закрывайте вкладку.</p>
@@ -148,7 +148,7 @@
       <p class="hint" id="series-hint"></p>
     </div>
 
-    <div class="card">
+    <div class="card study-actions">
       <button class="btn btn-primary" id="study-open" type="button">Открыть</button>
       <button class="btn" id="study-back" type="button">Выбрать другой архив</button>
     </div>
@@ -252,6 +252,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=0.4.1"></script>
+<script type="module" src="app.js?v=0.4.2"></script>
 </body>
 </html>
