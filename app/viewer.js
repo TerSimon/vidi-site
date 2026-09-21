@@ -10,15 +10,15 @@
 //  телефона и уменьшение объёма под память их не сдвигают.
 //
 
-import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.7.1';
+import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.8.0';
 import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen, zoomAround,
-  planeBasis, noRotation, rotateAround } from './planes.js?v=0.7.1';
-import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.7.1';
-import { buildVolume } from './archive.js?v=0.7.1';
-import { PanoRenderer } from './render/pano.js?v=0.7.1';
-import { VolumeRenderer, halfView } from './render/volume3d.js?v=0.7.1';
-import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.7.1';
-import { patientAxes } from './geometry.js?v=0.7.1';
+  planeBasis, noRotation, rotateAround } from './planes.js?v=0.8.0';
+import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.8.0';
+import { buildVolume } from './archive.js?v=0.8.0';
+import { PanoRenderer } from './render/pano.js?v=0.8.0';
+import { VolumeRenderer, halfView } from './render/volume3d.js?v=0.8.0';
+import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.8.0';
+import { patientAxes } from './geometry.js?v=0.8.0';
 
 const $ = (id) => document.getElementById(id);
 
@@ -629,7 +629,15 @@ const PLANE_COLOR = {
   sagittal: '#FF6B6B',
   coronal: '#4ED17E',
 };
-const HANDLE_HIT = 26;
+// Размеры ручки в точках ЭКРАНА, а не холста: на Retina холст вдвое плотнее,
+// и ручка радиусом 5.5 выходила меньше трёх миллиметров — пальцем не попасть.
+const HANDLE_R_CSS = 11;      // видимый радиус
+const HANDLE_HIT_CSS = 24;    // радиус попадания — с запасом под палец
+
+/** Сколько точек холста приходится на точку экрана. */
+function pxScale(canvas) {
+  return canvas.width / Math.max(1, canvas.clientWidth || canvas.width);
+}
 
 function dot3(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
 function cross3(a, b) {
@@ -679,8 +687,9 @@ function drawCrosshair(ctx, canvas, plane, map) {
       const hx = h.cx + line.du * h.r * sgn;
       const hy = h.cy + line.dv * h.r * sgn;
       const live = rotating?.plane === plane && rotating.id === line.other + sgn;
+      const R = HANDLE_R_CSS * pxScale(canvas);
       ctx.beginPath();
-      ctx.arc(hx, hy, live ? 7 : 5.5, 0, Math.PI * 2);
+      ctx.arc(hx, hy, live ? R * 1.25 : R, 0, Math.PI * 2);
       ctx.fillStyle = line.color;
       ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,0.45)';
@@ -697,7 +706,7 @@ function handleUnder(plane, map, canvas, at) {
     for (const sgn of [-1, 1]) {
       const hx = h.cx + line.du * h.r * sgn;
       const hy = h.cy + line.dv * h.r * sgn;
-      if (Math.hypot(at.x - hx, at.y - hy) <= HANDLE_HIT) {
+      if (Math.hypot(at.x - hx, at.y - hy) <= HANDLE_HIT_CSS * pxScale(canvas)) {
         return { id: line.other + sgn, cx: h.cx, cy: h.cy };
       }
     }
@@ -1037,11 +1046,13 @@ function bindPointer(plane) {
     if (drag.mode === 'rotate') {
       const at = pos(canvas, e);
       const now = Math.atan2(at.y - drag.cy, at.x - drag.cx);
-      // Знак: экранный угол растёт по часовой (ось Y вниз), а поворот каркаса
-      // на +α уводит точки изображения против часовой. Минус возвращает
-      // картинку под палец — то же правило, что у увеличения к пальцам.
+      // Знак. Пока крутилось изображение, здесь стоял минус: поворот каркаса
+      // на +α уводил точки картинки против часовой. Теперь крутится
+      // перекрестие, а его линии идут за каркасом напрямую — след другой
+      // плоскости поворачивается ровно на +α, потому что направления экрана
+      // при этом не трогаются. Минус стал бы поворотом против пальца.
       rotation = rotateAround(drag.rot, planeBasis(study.layouts[plane], drag.rot).N,
-        -(now - drag.from));
+        now - drag.from);
       drawAll();
       return;
     }
@@ -1384,7 +1395,7 @@ export function measureAt(plane, points, kind = 'ruler') {
 
 // Опоры для автоматических проверок.
 //
-// Через import их не взять: у './viewer.js?v=0.7.1' и './viewer.js?v=0.7.1'
+// Через import их не взять: у './viewer.js?v=0.8.0' и './viewer.js?v=0.8.0'
 // разные экземпляры модуля, и проверка получила бы пустой просмотр вместо
 // открытого. Номер в адресе меняется каждый выпуск, поэтому проверки
 // цепляются сюда, а не за адрес. Внутренности приложения в браузере и так

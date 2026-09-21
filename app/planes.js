@@ -12,7 +12,7 @@
 //  сторону наугад — значит однажды оперировать не ту.
 //
 
-import { patientAxes } from './geometry.js?v=0.7.1';
+import { patientAxes } from './geometry.js?v=0.8.0';
 
 export const PLANES = ['axial', 'sagittal', 'coronal'];
 
@@ -140,18 +140,46 @@ export function screenMap(g, layout, dims, widthPx, heightPx, state) {
 /**
  * Направления панели в пространстве объёма после разворота.
  *
- * Разворот жёсткий: все три панели поворачиваются вместе, как один каркас.
- * Поэтому перекрестие в панели остаётся прямым — поворачивается изображение
- * под ним, а не линии поверх него. Так же устроено на Mac.
+ * Разворот двигает НОРМАЛИ плоскостей, а не экран. В той панели, за ручку
+ * которой тянут, изображение стоит на месте, а поворачиваются линии
+ * перекрестия — следы двух других плоскостей. Соседние панели становятся
+ * косыми, но остаются «стоймя», а не заваливаются набок.
+ *
+ * Так устроено на Mac, и это не украшение: если вместе с каркасом крутить и
+ * экран, врач теряет, где право и где верх, ровно в тот момент, когда ведёт
+ * срез вдоль оси зуба.
+ *
+ * Считается так: нормаль поворачивается целиком, а направления экрана берутся
+ * от исходной укладки и проецируются на новую плоскость. Поворот вокруг
+ * собственной нормали панели оставляет их нетронутыми — отсюда неподвижная
+ * картинка.
  */
 export function planeBasis(layout, rot) {
   const axis = (a, flip) => { const v = [0, 0, 0]; v[a] = flip ? -1 : 1; return v; };
   const U0 = axis(layout.u.axis, layout.u.flip);
   const V0 = axis(layout.v.axis, layout.v.flip);
-  if (!rot) return { U: U0, V: V0, N: cross(U0, V0) };
-  const U = apply(rot, U0);
-  const V = apply(rot, V0);
-  return { U, V, N: cross(U, V) };
+  const N0 = cross(U0, V0);
+  if (!rot) return { U: U0, V: V0, N: N0 };
+  const N = unit(apply(rot, N0));
+
+  // Проекция исходного «вправо» на новую плоскость. Если оно почти совпало с
+  // нормалью — опираемся на «вниз»: иначе остаток проекции это шум, и экран
+  // прыгнет.
+  let U = drop(U0, N);
+  if (norm(U) < 0.15) U = cross(N, unit(drop(V0, N)));
+  U = unit(U);
+  const V = cross(N, U);   // так, что cross(U, V) снова даёт N
+  return { U, V, N };
+}
+
+function drop(v, n) {
+  const k = v[0] * n[0] + v[1] * n[1] + v[2] * n[2];
+  return [v[0] - k * n[0], v[1] - k * n[1], v[2] - k * n[2]];
+}
+function norm(v) { return Math.hypot(v[0], v[1], v[2]); }
+function unit(v) {
+  const l = norm(v);
+  return l > 1e-9 ? [v[0] / l, v[1] / l, v[2] / l] : v;
 }
 
 function apply(m, v) {

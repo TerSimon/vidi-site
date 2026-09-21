@@ -11,12 +11,12 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, describeHolder, SEAT_PING_MS,
-} from './auth.js?v=0.7.1';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=0.7.1';
+} from './auth.js?v=0.8.0';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=0.8.0';
 import { attachViewer, showVolume, clearVolume, selectPlane, layoutViewer }
-  from './viewer.js?v=0.7.1';
+  from './viewer.js?v=0.8.0';
 
-const VERSION = '0.7.1';
+const VERSION = '0.8.0';
 const STAGE = 'панорама';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
@@ -695,13 +695,17 @@ function showPlate(series, built) {
   $('notes-text').textContent = [head, ...built.notes].join(' ');
 
   const badge = $('plate-badge');
-  // Коротко: в строке с именем пациента каждое слово отнимает у имени место.
-  badge.textContent = built.geometry.mm
+  // Знак молчалив: размер точки и оговорки — в окне, которое он открывает.
+  // Подсказка при наведении и для голосового доступа остаётся текстом.
+  const short = built.geometry.mm
     ? (isReduced(built) ? 'ужат · ' + built.geometry.voxel.i.toFixed(2) + ' мм'
-      : built.geometry.voxel.i.toFixed(2) + ' мм')
+      : 'точка ' + built.geometry.voxel.i.toFixed(2) + ' мм')
     : 'без масштаба';
-  // Жёлтым — только когда есть о чём предупредить. Постоянный жёлтый в строке
-  // перестаёт читаться как предупреждение.
+  badge.title = short;
+  badge.setAttribute('aria-label', 'Что открыто: ' + short);
+  badge.dataset.short = short;
+  // Жёлтым — только когда есть о чём предупредить. Постоянный жёлтый глаз
+  // перестаёт замечать.
   badge.classList.toggle('is-warn', built.notes.length > 0);
   badge.hidden = false;
   showNotes(false);
@@ -725,7 +729,6 @@ const versionLabel = VERSION + ' · ' + STAGE;
 $('version-login').textContent = 'Vidi ' + versionLabel;
 $('version-start').textContent = 'Vidi ' + versionLabel;
 $('version-blocked').textContent = 'Vidi ' + versionLabel;
-$('version-viewer').textContent = versionLabel;
 
 attachViewer();
 

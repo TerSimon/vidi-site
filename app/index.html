@@ -11,13 +11,7 @@
 <meta name="theme-color" content="#0B0E14">
 <title>Vidi</title>
 <link rel="icon" href="/favicon.ico">
-<!-- Шрифты дизайн-системы. Грузятся не блокируя: если сеть подведёт, останется
-     системный шрифт, и врач всё равно увидит снимок. -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" media="print" onload="this.media='all'"
-      href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="app.css?v=0.7.1">
+<link rel="stylesheet" href="app.css?v=0.8.0">
 </head>
 <body>
 
@@ -62,7 +56,7 @@
 
       <button class="btn btn-primary" id="login-submit" type="submit">Войти</button>
       <p class="notice" id="login-notice" hidden></p>
-      <p class="hint">Код выдаёт бот <a href="https://t.me/vidivieverbot" target="_blank" rel="noopener">@vidivieverbot</a> — тот же, что для приложения на Mac.</p>
+      <p class="hint">Код выдаёт бот <a href="https://t.me/vidivieverbot" target="_blank" rel="noopener">@vidivieverbot</a> — тот же, что для приложения на Mac. <a href="/spravka.html" target="_blank" rel="noopener">Справка</a>.</p>
     </form>
 
     <div class="card" id="env-card">
@@ -108,6 +102,7 @@
            формат всё равно определяется по содержимому, а не по имени. -->
       <input type="file" id="file-input" hidden>
       <p class="hint" id="open-hint">Архив открывается на этом устройстве и никуда не отправляется.</p>
+      <p class="hint"><a href="/spravka.html" target="_blank" rel="noopener">Справка: жесты, разворот осей, измерения</a></p>
     </div>
 
     <div class="card">
@@ -169,20 +164,23 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
     </button>
     <div class="patient" id="patient">Исследование не открыто</div>
-    <div class="topbar-right">
-      <button class="chip-btn" id="plate-badge" type="button" hidden></button>
-      <span class="version" id="version-viewer"></span>
-    </div>
+  
   </header>
 
   <!-- Переключатель панелей: виден только на узком экране. -->
-  <nav class="planes" id="planes" role="tablist" aria-label="Проекции">
-    <div class="planes-pill">
+  <nav class="planes" id="planes" aria-label="Проекции">
+    <div class="planes-pill" role="tablist">
     <button class="plane-tab is-active" role="tab" type="button" data-plane="axial" aria-selected="true" style="--plane: var(--plane-axial)"><span class="dot"></span>Axial</button>
     <button class="plane-tab" role="tab" type="button" data-plane="sagittal" aria-selected="false" style="--plane: var(--plane-sagittal)"><span class="dot"></span>Sagittal</button>
     <button class="plane-tab" role="tab" type="button" data-plane="coronal" aria-selected="false" style="--plane: var(--plane-coronal)"><span class="dot"></span>Coronal</button>
     <button class="plane-tab" role="tab" type="button" data-plane="volume" aria-selected="false" style="--plane: var(--plane-neutral)"><span class="dot"></span>3D</button>
     </div>
+    <!-- Что именно открыто: серия, размер точки, оговорки. Знаком, а не
+         строкой — строка отнимала место у имени пациента и всё равно
+         обрезалась. -->
+    <button class="info-btn" id="plate-badge" type="button" hidden aria-label="Что открыто">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.6v.6"/></svg>
+    </button>
   </nav>
 
   <main class="grid" id="grid">
@@ -301,6 +299,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=0.7.1"></script>
+<script type="module" src="app.js?v=0.8.0"></script>
 </body>
 </html>

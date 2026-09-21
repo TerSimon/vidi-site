@@ -1,4 +1,64 @@
 /*
+  Шрифты дизайн-системы лежат рядом, а не у Google.
+
+  Страница, на которой открывают КТ пациента, не должна ходить никуда наружу
+  вовсе: обращение за шрифтом передаёт стороннему сервису IP и адрес страницы,
+  и объяснять это в политике хуже, чем не делать. Заодно снимок открывается
+  и там, где интернет в кабинете еле держится.
+
+  Файлы — подмножества кириллицы и латиницы, всего 136 КБ. Лицензия SIL OFL
+  у всех трёх гарнитур разрешает размещать их у себя.
+*/
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(vendor/fonts/inter-cyrillic.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(vendor/fonts/inter-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Golos Text';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(vendor/fonts/golos-800-cyrillic.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Golos Text';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(vendor/fonts/golos-800-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url(vendor/fonts/mono-cyrillic.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url(vendor/fonts/mono-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
   Оболочка Vidi в браузере. Палитра — те же токены, что в приложении на Mac
   (Color+Vidi.swift): врач не должен видеть два разных Vidi.
 
@@ -272,7 +332,8 @@ body {
 .topbar-right .version { flex: none; }
 
 .planes {
-  display: none; /* на широком экране видны все четыре панели сразу */
+  display: flex;
+  align-items: center;
   justify-content: center;
   gap: 2px;
   padding: 8px calc(12px + var(--safe-right)) 8px calc(12px + var(--safe-left));
@@ -280,6 +341,7 @@ body {
 
 /* Ряд вкладок — тот же плавающий тулбар системы: стекло, форма пилюли,
    внутри круглые кнопки. Собран по веб-демо, где он уже проверен на телефоне. */
+.planes { position: relative; }
 .planes-pill {
   display: flex;
   align-items: center;
@@ -321,6 +383,30 @@ body {
 }
 .plane-tab:hover { color: var(--ink); background: var(--tint-hover); }
 .plane-tab.is-active { background: var(--tint-active); color: var(--ink); }
+
+/*
+  Знак «что открыто». Раньше это была строка с размером точки рядом с именем
+  пациента: она обрезалась до «0…» и отнимала у имени место. Теперь — круглый
+  знак в правом углу; жёлтый, только когда есть о чём предупредить.
+*/
+.info-btn {
+  position: absolute;
+  right: calc(12px + var(--safe-right));
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--glass-line);
+  border-radius: 50%;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+.info-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.info-btn:hover { color: var(--ink); }
+.info-btn.is-warn { color: #F6D686; border-color: rgba(242, 193, 78, .45); background: rgba(242, 193, 78, .12); }
 
 .grid {
   flex: 1;
@@ -706,8 +792,12 @@ code {
 
 /* ─── Узкий экран: одна панель + переключатель ──────────────────────────── */
 
+@media (min-width: 721px) {
+  /* Четыре панели видны сразу — переключать нечего, остаётся только знак. */
+  .planes-pill { display: none; }
+}
+
 @media (max-width: 720px) {
-  .planes { display: flex; }
 
   .grid {
     grid-template-columns: 1fr;
