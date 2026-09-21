@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all'"
       href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="app.css?v=0.7.0">
+<link rel="stylesheet" href="app.css?v=0.7.1">
 </head>
 <body>
 
@@ -177,10 +177,12 @@
 
   <!-- Переключатель панелей: виден только на узком экране. -->
   <nav class="planes" id="planes" role="tablist" aria-label="Проекции">
-    <button class="plane-tab is-active" role="tab" type="button" data-plane="axial" aria-selected="true">Ax</button>
-    <button class="plane-tab" role="tab" type="button" data-plane="sagittal" aria-selected="false">Sag</button>
-    <button class="plane-tab" role="tab" type="button" data-plane="coronal" aria-selected="false">Cor</button>
-    <button class="plane-tab" role="tab" type="button" data-plane="volume" aria-selected="false">3D</button>
+    <div class="planes-pill">
+    <button class="plane-tab is-active" role="tab" type="button" data-plane="axial" aria-selected="true" style="--plane: var(--plane-axial)"><span class="dot"></span>Axial</button>
+    <button class="plane-tab" role="tab" type="button" data-plane="sagittal" aria-selected="false" style="--plane: var(--plane-sagittal)"><span class="dot"></span>Sagittal</button>
+    <button class="plane-tab" role="tab" type="button" data-plane="coronal" aria-selected="false" style="--plane: var(--plane-coronal)"><span class="dot"></span>Coronal</button>
+    <button class="plane-tab" role="tab" type="button" data-plane="volume" aria-selected="false" style="--plane: var(--plane-neutral)"><span class="dot"></span>3D</button>
+    </div>
   </nav>
 
   <main class="grid" id="grid">
@@ -237,32 +239,34 @@
   </main>
 
   <div class="toolbar" id="toolbar" role="toolbar" aria-label="Инструменты">
-    <button class="tool" type="button" disabled data-tool="window">
+    <div class="toolbar-pill">
+    <button class="tool" type="button" disabled data-tool="window" aria-label="Окно">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 010 16z" fill="currentColor" stroke="none"/></svg>
-      <span>Окно</span>
+      <span class="sr-only">Окно</span>
     </button>
-    <button class="tool" type="button" disabled data-tool="slab">
+    <button class="tool" type="button" disabled data-tool="slab" aria-label="Толщина слоя">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16"/></svg>
-      <span>Слой</span>
+      <span class="sr-only">Слой</span><span class="mm"></span>
     </button>
-    <button class="tool" type="button" disabled data-tool="ruler">
+    <button class="tool" type="button" disabled data-tool="ruler" aria-label="Линейка">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15L15 4l5 5L9 20z"/><path d="M8 11l2 2M11 8l2 2M14 13l2 2"/></svg>
-      <span>Линейка</span>
+      <span class="sr-only">Линейка</span>
     </button>
-    <button class="tool" type="button" disabled data-tool="angle">
+    <button class="tool" type="button" disabled data-tool="angle" aria-label="Угол">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19h15M5 19L17 6"/><path d="M9 19a6 6 0 00.9-3"/></svg>
-      <span>Угол</span>
+      <span class="sr-only">Угол</span>
     </button>
     <!-- Отдельно от «Сброса»: убрать разметку и вернуть вид — разные действия,
          и на Mac они тоже разведены (там удаление ещё и спрашивает). -->
-    <button class="tool tool-danger" type="button" disabled data-tool="erase">
+    <button class="tool tool-danger" type="button" disabled data-tool="erase" aria-label="Стереть разметку">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 7V5h4v2M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>
-      <span>Стереть</span>
+      <span class="sr-only">Стереть</span>
     </button>
-    <button class="tool" type="button" disabled data-tool="reset">
+    <button class="tool" type="button" disabled data-tool="reset" aria-label="Сброс вида">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 108-8 8 8 0 00-5.7 2.4L4 9"/><path d="M4 4v5h5"/></svg>
-      <span>Сброс</span>
+      <span class="sr-only">Сброс</span>
     </button>
+    </div>
   </div>
 
 </section>
@@ -297,6 +301,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=0.7.0"></script>
+<script type="module" src="app.js?v=0.7.1"></script>
 </body>
 </html>

@@ -11,12 +11,12 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, describeHolder, SEAT_PING_MS,
-} from './auth.js?v=0.7.0';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=0.7.0';
+} from './auth.js?v=0.7.1';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=0.7.1';
 import { attachViewer, showVolume, clearVolume, selectPlane, layoutViewer }
-  from './viewer.js?v=0.7.0';
+  from './viewer.js?v=0.7.1';
 
-const VERSION = '0.7.0';
+const VERSION = '0.7.1';
 const STAGE = 'панорама';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
@@ -695,9 +695,10 @@ function showPlate(series, built) {
   $('notes-text').textContent = [head, ...built.notes].join(' ');
 
   const badge = $('plate-badge');
+  // Коротко: в строке с именем пациента каждое слово отнимает у имени место.
   badge.textContent = built.geometry.mm
     ? (isReduced(built) ? 'ужат · ' + built.geometry.voxel.i.toFixed(2) + ' мм'
-      : 'точка ' + built.geometry.voxel.i.toFixed(2) + ' мм')
+      : built.geometry.voxel.i.toFixed(2) + ' мм')
     : 'без масштаба';
   // Жёлтым — только когда есть о чём предупредить. Постоянный жёлтый в строке
   // перестаёт читаться как предупреждение.

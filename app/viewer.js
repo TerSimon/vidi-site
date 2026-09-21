@@ -10,15 +10,15 @@
 //  телефона и уменьшение объёма под память их не сдвигают.
 //
 
-import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.7.0';
+import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.7.1';
 import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen, zoomAround,
-  planeBasis, noRotation, rotateAround } from './planes.js?v=0.7.0';
-import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.7.0';
-import { buildVolume } from './archive.js?v=0.7.0';
-import { PanoRenderer } from './render/pano.js?v=0.7.0';
-import { VolumeRenderer, halfView } from './render/volume3d.js?v=0.7.0';
-import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.7.0';
-import { patientAxes } from './geometry.js?v=0.7.0';
+  planeBasis, noRotation, rotateAround } from './planes.js?v=0.7.1';
+import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.7.1';
+import { buildVolume } from './archive.js?v=0.7.1';
+import { PanoRenderer } from './render/pano.js?v=0.7.1';
+import { VolumeRenderer, halfView } from './render/volume3d.js?v=0.7.1';
+import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.7.1';
+import { patientAxes } from './geometry.js?v=0.7.1';
 
 const $ = (id) => document.getElementById(id);
 
@@ -615,51 +615,95 @@ function drawGrid(ctx, canvas) {
   ctx.stroke();
 }
 
-// Ручка разворота: за неё каркас поворачивают вокруг нормали панели. Радиус в
-// точках устройства — палец на телефоне и курсор на Mac целятся одинаково.
-const HANDLE_R = 52;
+/*
+  Перекрестие как в веб-демо и на Mac: каждая линия — это след другой
+  плоскости, покрашенный её же цветом. Красная линия в аксиальной панели это
+  сагиттальная плоскость, зелёная — корональная. Четыре круглые ручки на
+  концах: за них каркас разворачивают.
+
+  Раньше здесь был один синий крест и одна безымянная ручка сбоку: по нему
+  нельзя было понять, что именно ты крутишь.
+*/
+const PLANE_COLOR = {
+  axial: '#4C8EFF',
+  sagittal: '#FF6B6B',
+  coronal: '#4ED17E',
+};
 const HANDLE_HIT = 26;
 
-/** Где сейчас ручка разворота этой панели, в точках canvas. */
-function handleAt(plane, map) {
-  const [x, y] = voxelToScreen(map, study.layouts[plane], crosshair);
-  return { x: x + HANDLE_R, y, cx: x, cy: y };
+function dot3(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+function cross3(a, b) {
+  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+}
+
+/**
+ * Ручки разворота этой панели: по две на каждую чужую плоскость.
+ * Возвращает и центр — вокруг него считается угол жеста.
+ */
+function handlesOf(plane, map, canvas) {
+  const layout = study.layouts[plane];
+  const { U, V, N } = planeBasis(layout, rotation);
+  const [cx, cy] = voxelToScreen(map, layout, crosshair);
+  const r = 0.36 * Math.min(canvas.width, canvas.height);
+  const out = [];
+  for (const other of PLANES) {
+    if (other === plane) continue;
+    const on = planeBasis(study.layouts[other], rotation).N;
+    const d3 = cross3(N, on);
+    let du = dot3(d3, U);
+    let dv = dot3(d3, V);
+    const l = Math.hypot(du, dv);
+    if (!(l > 1e-9)) continue;
+    du /= l; dv /= l;
+    out.push({ other, du, dv, color: PLANE_COLOR[other] });
+  }
+  return { cx, cy, r, lines: out };
 }
 
 function drawCrosshair(ctx, canvas, plane, map) {
-  const layout = study.layouts[plane];
-  const [x, y] = voxelToScreen(map, layout, crosshair);
-  ctx.strokeStyle = 'rgba(76,142,255,0.55)';
-  ctx.lineWidth = 1;
-  const gap = 10;
-  ctx.beginPath();
-  ctx.moveTo(x, 0); ctx.lineTo(x, y - gap);
-  ctx.moveTo(x, y + gap); ctx.lineTo(x, canvas.height);
-  ctx.moveTo(0, y); ctx.lineTo(x - gap, y);
-  ctx.moveTo(x + gap, y); ctx.lineTo(canvas.width, y);
-  ctx.stroke();
-
-  // Ручка. Без неё развернуть срез нечем: тянуть за сами линии нельзя, они
-  // уже заняты — за них листают срезы.
-  const live = rotating?.plane === plane ? rotating.angle : 0;
-  const hx = x + HANDLE_R * Math.cos(live);
-  const hy = y + HANDLE_R * Math.sin(live);
-  if (live) {
+  const h = handlesOf(plane, map, canvas);
+  const L = canvas.width + canvas.height;
+  for (const line of h.lines) {
     ctx.beginPath();
-    ctx.moveTo(x, y); ctx.lineTo(hx, hy);
-    ctx.strokeStyle = 'rgba(76,142,255,0.45)';
+    ctx.moveTo(h.cx - line.du * L, h.cy - line.dv * L);
+    ctx.lineTo(h.cx + line.du * L, h.cy + line.dv * L);
+    ctx.strokeStyle = line.color;
+    ctx.globalAlpha = 0.75;
     ctx.lineWidth = 1;
     ctx.stroke();
+    ctx.globalAlpha = 1;
   }
-  ctx.beginPath();
-  ctx.arc(hx, hy, 5, 0, Math.PI * 2);
-  ctx.fillStyle = live ? '#4C8EFF' : 'rgba(76,142,255,0.85)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+  // Ручки поверх линий, чтобы их было видно на пересечении.
+  for (const line of h.lines) {
+    for (const sgn of [-1, 1]) {
+      const hx = h.cx + line.du * h.r * sgn;
+      const hy = h.cy + line.dv * h.r * sgn;
+      const live = rotating?.plane === plane && rotating.id === line.other + sgn;
+      ctx.beginPath();
+      ctx.arc(hx, hy, live ? 7 : 5.5, 0, Math.PI * 2);
+      ctx.fillStyle = line.color;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
 }
 
+/** Ручка под пальцем, если палец попал в неё. */
+function handleUnder(plane, map, canvas, at) {
+  const h = handlesOf(plane, map, canvas);
+  for (const line of h.lines) {
+    for (const sgn of [-1, 1]) {
+      const hx = h.cx + line.du * h.r * sgn;
+      const hy = h.cy + line.dv * h.r * sgn;
+      if (Math.hypot(at.x - hx, at.y - hy) <= HANDLE_HIT) {
+        return { id: line.other + sgn, cx: h.cx, cy: h.cy };
+      }
+    }
+  }
+  return null;
+}
 /** Масштабная полоска: сколько это миллиметров, видно не считая в уме. */
 function drawScale(ctx, canvas, map) {
   if (!study.geometry.mm) return;
@@ -805,14 +849,15 @@ function updateTools() {
     btn.disabled = !usable;
     btn.classList.toggle('is-active', usable && !slab && !erase && tool === name);
     if (slab) {
-      const span = btn.querySelector('span');
+      // Подписи под значком больше нет — значение стоит цифрой в углу кнопки.
       const mm = study?.arch?.slabMM;
-      if (span) span.textContent = usable && mm ? 'Слой ' + (mm < 10 ? mm.toFixed(1) : mm) : 'Слой';
+      const box = btn.querySelector('.mm');
+      if (box) box.textContent = usable && mm ? (mm < 10 ? mm.toFixed(1) : String(mm)) : '';
+      btn.setAttribute('aria-label', usable && mm ? 'Толщина слоя ' + mm + ' мм' : 'Толщина слоя');
     }
     if (erase) {
-      const span = btn.querySelector('span');
-      if (span) span.textContent = eraseArmed ? 'Точно?' : 'Стереть';
       btn.classList.toggle('is-armed', usable && eraseArmed);
+      btn.setAttribute('aria-label', eraseArmed ? 'Стереть разметку — нажмите ещё раз' : 'Стереть разметку');
     }
   }
 }
@@ -930,14 +975,14 @@ function bindPointer(plane) {
     points.set(e.pointerId, pos(canvas, e));
     if (points.size === 1) {
       const at = pos(canvas, e);
-      const h = handleAt(plane, mapFor(plane));
-      if (Math.hypot(at.x - h.x, at.y - h.y) <= HANDLE_HIT) {
+      const grab = tool === 'navigate' ? handleUnder(plane, mapFor(plane), canvas, at) : null;
+      if (grab) {
         // Взялись за ручку — дальше это разворот, а не листание.
-        const from = Math.atan2(at.y - h.cy, at.x - h.cx);
-        rotating = { plane, angle: from };
-        drag = { rotate: true, from, rot: rotation, moved: true };
+        const from = Math.atan2(at.y - grab.cy, at.x - grab.cx);
+        rotating = { plane, id: grab.id };
+        drag = { mode: 'rotate', from, cx: grab.cx, cy: grab.cy, rot: rotation, moved: true };
       } else {
-        drag = { start: at, moved: false, center: crosshair.slice(),
+        drag = { mode: 'pan', start: at, moved: false, center: crosshair.slice(),
           look: { ...study.look }, pan: { ...view[plane] } };
       }
     } else if (points.size === 2) {
@@ -946,6 +991,9 @@ function bindPointer(plane) {
       // Запоминаем ТОЧКУ ОБЪЁМА под пальцами: она и должна остаться под ними,
       // как бы врач ни свёл и ни развёл пальцы.
       drag = {
+        mode: 'pinch',
+        // Расстоянием жест больше не опознаётся: сведённые в точку пальцы дают
+        // ноль, и жест переставал быть щипком посреди самого себя.
         pinch: Math.hypot(a.x - b.x, a.y - b.y),
         mid,
         anchor: screenToVoxel(mapFor(plane), mid.x, mid.y),
@@ -960,7 +1008,7 @@ function bindPointer(plane) {
     if (!study || !points.has(e.pointerId)) return;
     points.set(e.pointerId, pos(canvas, e));
 
-    if (drag?.pinch) {
+    if (drag?.mode === 'pinch') {
       const two = [...points.values()];
       if (two.length < 2) return;
       const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
@@ -971,7 +1019,10 @@ function bindPointer(plane) {
       const layout = study.layouts[plane];
       // Ставим запомненную точку объёма ровно под текущую середину пальцев:
       // это разом даёт и увеличение к месту, и перемещение двумя пальцами.
-      const next = { ...drag.state, zoom, index: crosshair[layout.n] };
+      // Каркас у щипка тот же, что у отрисовки: без basis развёрнутая панель
+      // считала бы увеличение по прямым осям и уводила картинку из-под пальцев.
+      const next = { ...drag.state, zoom,
+        basis: planeBasis(layout, rotation), center: crosshair };
       const map = screenMap(study.geometry, layout, study.dims,
         canvas.width, canvas.height, next);
       const at = voxelToScreen(map, layout, drag.anchor);
@@ -981,13 +1032,11 @@ function bindPointer(plane) {
       drawPane(plane);
       return;
     }
-    if (!drag || drag.pinch) return;
+    if (!drag || drag.mode === 'pinch') return;
 
-    if (drag.rotate) {
+    if (drag.mode === 'rotate') {
       const at = pos(canvas, e);
-      const h = handleAt(plane, mapFor(plane));
-      const now = Math.atan2(at.y - h.cy, at.x - h.cx);
-      rotating = { plane, angle: now };
+      const now = Math.atan2(at.y - drag.cy, at.x - drag.cx);
       // Знак: экранный угол растёт по часовой (ось Y вниз), а поворот каркаса
       // на +α уводит точки изображения против часовой. Минус возвращает
       // картинку под палец — то же правило, что у увеличения к пальцам.
@@ -1030,7 +1079,7 @@ function bindPointer(plane) {
     if (!study) { drag = null; return; }
     const wasDrag = drag;
     if (points.size === 0) drag = null;
-    if (!wasDrag || wasDrag.moved || wasDrag.pinch) return;
+    if (!wasDrag || wasDrag.moved || wasDrag.mode === 'pinch') return;
     tap(plane, pos(canvas, e));
   };
   canvas.addEventListener('pointerup', end);
@@ -1055,11 +1104,12 @@ function bindVolumePointer() {
     points.set(e.pointerId, pos(canvas, e));
     if (fourth === 'panorama') {
       if (points.size === 1) {
-        drag = { start: pos(canvas, e), pan: { x: panoView.panX, y: panoView.panY } };
+        drag = { mode: 'pan', start: pos(canvas, e), pan: { x: panoView.panX, y: panoView.panY } };
       } else if (points.size === 2) {
         const [a, b] = [...points.values()];
         const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
         drag = {
+          mode: 'pinch',
           pinch: Math.hypot(a.x - b.x, a.y - b.y),
           zoom: panoView.zoom,
           anchor: panoPointAt(mid),
@@ -1068,12 +1118,13 @@ function bindVolumePointer() {
       return;
     }
     if (points.size === 1) {
-      drag = { start: pos(canvas, e), yaw: view.volume.yaw, pitch: view.volume.pitch };
+      drag = { mode: 'spin', start: pos(canvas, e), yaw: view.volume.yaw, pitch: view.volume.pitch };
       view.volume.moving = true;
     } else if (points.size === 2) {
       const [a, b] = [...points.values()];
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       drag = {
+        mode: 'pinch',
         pinch: Math.hypot(a.x - b.x, a.y - b.y),
         zoom: view.volume.zoom,
         anchor: volumePointAt(canvas, mid),
@@ -1088,7 +1139,7 @@ function bindVolumePointer() {
     if (!drag) return;
 
     if (fourth === 'panorama') {
-      if (drag.pinch) {
+      if (drag.mode === 'pinch') {
         // Один палец убрали посреди щипка — второму продолжать нечего.
         const two = [...points.values()];
         if (two.length < 2) return;
@@ -1106,7 +1157,7 @@ function bindVolumePointer() {
       return;
     }
 
-    if (drag.pinch) {
+    if (drag.mode === 'pinch') {
       const two = [...points.values()];
       if (two.length < 2) return;
       const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
@@ -1333,7 +1384,7 @@ export function measureAt(plane, points, kind = 'ruler') {
 
 // Опоры для автоматических проверок.
 //
-// Через import их не взять: у './viewer.js?v=0.7.0' и './viewer.js?v=0.7.0'
+// Через import их не взять: у './viewer.js?v=0.7.1' и './viewer.js?v=0.7.1'
 // разные экземпляры модуля, и проверка получила бы пустой просмотр вместо
 // открытого. Номер в адресе меняется каждый выпуск, поэтому проверки
 // цепляются сюда, а не за адрес. Внутренности приложения в браузере и так
@@ -1343,10 +1394,18 @@ globalThis.__vidiViewer = {
   clearMeasures, setFourth, timeFourth, handleAt: testHandle, spinBy,
 };
 
-/** Для проверок: где ручка разворота панели. */
+/** Для проверок: где ручки разворота панели. */
 function testHandle(plane) {
   if (!study) return null;
-  return handleAt(plane, mapFor(plane));
+  const canvas = panes.get(plane).canvas;
+  const h = handlesOf(plane, mapFor(plane), canvas);
+  const first = h.lines[0];
+  return {
+    cx: h.cx, cy: h.cy,
+    x: h.cx + first.du * h.r,
+    y: h.cy + first.dv * h.r,
+    count: h.lines.length * 2,
+  };
 }
 
 /** Для проверок: довернуть каркас вокруг нормали панели на угол. */

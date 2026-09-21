@@ -245,7 +245,7 @@ body {
 .icon-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 .patient {
-  flex: 1;
+  flex: 1 1 50%;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -253,29 +253,73 @@ body {
   font-weight: 600;
 }
 
-.topbar-right { flex: none; color: var(--ink-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+/*
+  Правый край верхней строки. Раньше он был flex:none, то есть не сжимался
+  вовсе: метка с размером точки забирала место, а имя пациента сжималось до
+  нуля и пропадало. Теперь сжимаются оба, и имени гарантирована половина.
+*/
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 0 1 auto;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.topbar-right .version { flex: none; }
 
 .planes {
   display: none; /* на широком экране видны все четыре панели сразу */
-  gap: 4px;
+  justify-content: center;
+  gap: 2px;
   padding: 8px calc(12px + var(--safe-right)) 8px calc(12px + var(--safe-left));
+}
+
+/* Ряд вкладок — тот же плавающий тулбар системы: стекло, форма пилюли,
+   внутри круглые кнопки. Собран по веб-демо, где он уже проверен на телефоне. */
+.planes-pill {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
   background: var(--glass-bg);
-  border-bottom: 1px solid var(--line);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-line);
+  box-shadow: var(--glass-shadow);
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .plane-tab {
   appearance: none;
-  flex: 1;
-  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 999px;
   background: transparent;
   color: var(--ink-dim);
   font: inherit;
-  font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
 }
+.plane-tab .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--plane, var(--plane-neutral));
+}
+.plane-tab:hover { color: var(--ink); background: var(--tint-hover); }
 .plane-tab.is-active { background: var(--tint-active); color: var(--ink); }
 
 .grid {
@@ -417,39 +461,65 @@ body {
 .toolbar {
   display: flex;
   justify-content: center;
-  gap: 4px;
-  padding: 6px calc(8px + var(--safe-right)) calc(6px + var(--safe-bottom)) calc(8px + var(--safe-left));
+  padding: 8px calc(8px + var(--safe-right)) calc(8px + var(--safe-bottom)) calc(8px + var(--safe-left));
+}
+
+/* Пилюля тулбара. Подписей под значками нет — как в демо: шесть подписей в
+   ряд на телефоне теснятся и всё равно обрезаются. */
+.toolbar-pill {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border-top: 1px solid var(--line);
+  border: 1px solid var(--glass-line);
+  box-shadow: var(--glass-shadow);
 }
 
 .tool {
   appearance: none;
-  flex: 1 1 0;
-  max-width: 96px;
-  min-height: var(--tap);
+  position: relative;
+  width: var(--tap);
+  height: var(--tap);
   display: grid;
-  gap: 2px;
   place-items: center;
-  padding: 6px 4px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 50%;
   background: transparent;
-  color: var(--ink);
+  color: var(--ink-dim);
   font: inherit;
-  font-size: 11px;
   cursor: pointer;
+  transition: background-color .25s ease, color .25s ease, transform .2s ease;
 }
-.tool:hover { background: var(--tint-hover); }
-.tool.is-active { background: var(--tint-active); color: var(--signal); }
+.tool:hover:not(:disabled) { background: var(--tint-hover); color: var(--ink); }
+.tool:active:not(:disabled) { transform: scale(.9); }
+/* Активный инструмент — круглая заливка акцентом, значок белый. */
+.tool.is-active { background: var(--signal); color: #fff; }
 .tool:disabled { opacity: .38; cursor: default; background: transparent; }
-
-/* Удаление разметки. Красным — только когда взведено вторым нажатием:
-   постоянный красный в ряду читается как тревога, а не как кнопка. */
-.tool-danger.is-armed { color: var(--status-danger); background: color-mix(in srgb, var(--status-danger) 16%, transparent); }
-.tool svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Значение слоя — цифрой в углу кнопки, раз подписи нет. */
+.tool .mm {
+  position: absolute;
+  right: 3px;
+  bottom: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  color: var(--ink-faint);
+}
+.tool.is-active .mm { color: #fff; }
+/* Удаление разметки: обводка красным, заливки нет даже во взведённом виде —
+   по дизайн-системе разрушительное действие никогда не заливается. */
+.tool-danger { color: var(--status-danger); }
+.tool-danger.is-armed {
+  color: var(--status-danger);
+  box-shadow: inset 0 0 0 1.5px var(--status-danger);
+  background: rgba(255, 92, 92, .10);
+}
+.tool svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 
 /*
   Метка оговорки в верхней панели: бейдж дизайн-системы — моноширинный, pill,
@@ -459,8 +529,9 @@ body {
 */
 .chip-btn {
   appearance: none;
-  flex: none;
-  max-width: 42vw;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 30vw;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -652,10 +723,13 @@ code {
 
 /* Шесть кнопок в ряд на телефоне: подписи под значками сжимаются, но не
    переносятся — перенос поднимает панель и съедает высоту снимка. */
+/* Узкий телефон: шесть круглых кнопок и четыре вкладки должны уместиться в
+   один ряд. Перенос пилюли на вторую строку съел бы высоту снимка. */
 @media (max-width: 420px) {
-  .toolbar { gap: 2px; padding-left: calc(4px + var(--safe-left)); padding-right: calc(4px + var(--safe-right)); }
-  .tool { padding: 6px 2px; font-size: 10px; }
-  .tool span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .toolbar, .planes { padding-left: calc(6px + var(--safe-left)); padding-right: calc(6px + var(--safe-right)); }
+  /* Кнопку не мельчим: 44px — это палец. Шесть кругов с отступами занимают
+     294px, и на 390px они помещаются без сжатия. */
+  .plane-tab { padding: 0 9px; font-size: 12px; gap: 5px; }
   .view-btn { padding: 4px 9px; font-size: 11px; }
 }
 
