@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0B0E14">
 <title>Vidi</title>
 <link rel="icon" href="/favicon.ico">
-<link rel="stylesheet" href="app.css?v=0.5.3">
+<link rel="stylesheet" href="app.css?v=0.6.0">
 </head>
 <body>
 
@@ -201,6 +201,13 @@
     <div class="pane" data-plane="volume">
       <canvas class="pane-canvas" data-plane="volume"></canvas>
       <div class="pane-name">3D</div>
+      <!-- Готовые ракурсы, как на Mac: врач крутит череп пальцем, но вернуться
+           к прямому виду пальцем точно не получается. -->
+      <div class="views" id="views" hidden>
+        <button class="view-btn" type="button" data-view="front">Спереди</button>
+        <button class="view-btn" type="button" data-view="side">Сбоку</button>
+        <button class="view-btn" type="button" data-view="top">Сверху</button>
+      </div>
       <button class="pane-switch" id="btn-pano" type="button" disabled>Панорама</button>
       <div class="pane-empty">нет исследования</div>
     </div>
@@ -222,6 +229,12 @@
     <button class="tool" type="button" disabled data-tool="angle">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19h15M5 19L17 6"/><path d="M9 19a6 6 0 00.9-3"/></svg>
       <span>Угол</span>
+    </button>
+    <!-- Отдельно от «Сброса»: убрать разметку и вернуть вид — разные действия,
+         и на Mac они тоже разведены (там удаление ещё и спрашивает). -->
+    <button class="tool tool-danger" type="button" disabled data-tool="erase">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 7V5h4v2M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>
+      <span>Стереть</span>
     </button>
     <button class="tool" type="button" disabled data-tool="reset">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 108-8 8 8 0 00-5.7 2.4L4 9"/><path d="M4 4v5h5"/></svg>
@@ -255,6 +268,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=0.5.3"></script>
+<script type="module" src="app.js?v=0.6.0"></script>
 </body>
 </html>

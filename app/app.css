@@ -267,6 +267,9 @@ body {
   font-weight: 600;
   letter-spacing: .02em;
   color: var(--plane, var(--ink2));
+  /* Подпись стоит поверх снимка: на кости она белая по белому. Тень читается
+     на любой яркости и не занимает места, в отличие от подложки. */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .9);
   pointer-events: none;
 }
 
@@ -315,6 +318,38 @@ body {
 }
 .pane-switch:disabled { opacity: .4; cursor: default; }
 
+/* Ракурсы объёмного вида. Слева внизу — справа стоит переключатель панели,
+   а шкалы в этой панели нет, поэтому угол свободен. */
+.views {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.view-btn {
+  appearance: none;
+  min-height: 28px;
+  padding: 4px 11px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.view-btn:hover { color: var(--ink); background: var(--surface); }
+.view-btn.is-active { color: var(--ink); background: var(--surface2); }
+
 .toolbar {
   display: flex;
   justify-content: center;
@@ -346,6 +381,10 @@ body {
 .tool:hover { background: var(--surface); }
 .tool.is-active { background: var(--surface2); color: var(--accent); }
 .tool:disabled { opacity: .38; cursor: default; background: transparent; }
+
+/* Удаление разметки. Красным — только когда взведено вторым нажатием:
+   постоянный красный в ряду читается как тревога, а не как кнопка. */
+.tool-danger.is-armed { color: var(--danger); background: color-mix(in srgb, var(--danger) 16%, transparent); }
 .tool svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Плашка поверх снимка: «Разрешение 0,4 мм», предупреждения. */
@@ -558,6 +597,15 @@ code {
      переключение не пересоздаёт их. */
   .pane { display: none; }
   .pane.is-active { display: block; }
+}
+
+/* Шесть кнопок в ряд на телефоне: подписи под значками сжимаются, но не
+   переносятся — перенос поднимает панель и съедает высоту снимка. */
+@media (max-width: 420px) {
+  .toolbar { gap: 2px; padding-left: calc(4px + var(--safe-left)); padding-right: calc(4px + var(--safe-right)); }
+  .tool { padding: 6px 2px; font-size: 10px; }
+  .tool span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .view-btn { padding: 4px 9px; font-size: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

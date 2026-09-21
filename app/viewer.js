@@ -10,15 +10,15 @@
 //  телефона и уменьшение объёма под память их не сдвигают.
 //
 
-import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.5.3';
+import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.6.0';
 import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen, zoomAround }
-  from './planes.js?v=0.5.3';
-import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.5.3';
-import { buildVolume } from './archive.js?v=0.5.3';
-import { PanoRenderer } from './render/pano.js?v=0.5.3';
-import { VolumeRenderer, halfView } from './render/volume3d.js?v=0.5.3';
-import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.5.3';
-import { patientAxes } from './geometry.js?v=0.5.3';
+  from './planes.js?v=0.6.0';
+import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.6.0';
+import { buildVolume } from './archive.js?v=0.6.0';
+import { PanoRenderer } from './render/pano.js?v=0.6.0';
+import { VolumeRenderer, halfView } from './render/volume3d.js?v=0.6.0';
+import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.6.0';
+import { patientAxes } from './geometry.js?v=0.6.0';
 
 const $ = (id) => document.getElementById(id);
 
@@ -62,6 +62,9 @@ export function attachViewer() {
   document.getElementById('btn-pano')?.addEventListener('click', () => {
     setFourth(fourth === 'panorama' ? 'volume' : 'panorama');
   });
+  for (const btn of document.querySelectorAll('.view-btn')) {
+    btn.addEventListener('click', () => applyViewPreset(btn.dataset.view));
+  }
 
   const relayout = () => { layoutPanes(); drawAll(); };
   if (typeof ResizeObserver === 'function') {
@@ -371,6 +374,20 @@ function drawPane(plane) {
   drawCrosshair(ctx, p.canvas, plane, map);
   drawMeasures(ctx, plane, map);
   drawScale(ctx, p.canvas, map);
+  drawLook(ctx, p.canvas);
+}
+
+/*
+  Окно на снимке. На Mac ширина и центр написаны прямо в тулбаре, и врач по ним
+  понимает, почему кость выглядит так, а не иначе. В браузере тулбар узкий,
+  поэтому значения стоят в углу самого снимка — там же, где на Mac линейка
+  масштаба и подпись слоя развёртки.
+*/
+function drawLook(ctx, canvas) {
+  if (!study?.look) return;
+  label(ctx, canvas.width - 14, canvas.height - 14,
+    'окно ' + Math.round(study.look.width) + ' · центр ' + Math.round(study.look.center),
+    'right', 0.8);
 }
 
 /** Четвёртая панель: объёмный вид или развёртка вдоль дуги. */
@@ -387,6 +404,7 @@ function drawVolumePane() {
   ctx.clearRect(0, 0, p.canvas.width, p.canvas.height);
   if (fourth === 'panorama' && study.arch) drawPanorama(p, ctx);
   else drawVolume3D(p, ctx);
+  updateViewButtons();
 }
 
 function drawPanorama(p, ctx) {
@@ -411,7 +429,16 @@ function drawPanorama(p, ctx) {
   // Вписываем целиком, потом применяем увеличение и сдвиг. Сдвиг ограничен
   // так, чтобы картинку нельзя было утащить за край и потерять.
   const fit = Math.min(p.canvas.width / size.width, p.canvas.height / size.height);
-  const scale = fit * panoView.zoom;
+  // Развёртка втрое шире, чем выше. На телефоне в портрете она вписывается по
+  // ширине и занимает пятую часть экрана — полоска, на которой зуб размером с
+  // букву. Там даём ей заполнить высоту, но не больше чем в 2,5 раза от
+  // вписанного: дальше из кадра уходит половина ряда, и врач перестаёт
+  // понимать, к какой стороне относится то, что он видит.
+  // На широкой панели (два на два, телефон боком) поведение прежнее: видна
+  // вся дуга целиком.
+  const portrait = p.canvas.height > p.canvas.width;
+  const base = portrait ? Math.min(p.canvas.height / size.height, fit * 2.5) : fit;
+  const scale = base * panoView.zoom;
   const w = size.width * scale;
   const h = size.height * scale;
   const limitX = Math.max(0, (w - p.canvas.width) / 2);
@@ -422,7 +449,10 @@ function drawPanorama(p, ctx) {
   ctx.drawImage(renderer.canvas,
     (p.canvas.width - w) / 2 + panoView.panX,
     (p.canvas.height - h) / 2 + panoView.panY, w, h);
-  panoView.last = { fit, width: size.width, height: size.height,
+  // base, а не fit: щипок должен считать от того масштаба, который на экране.
+  // fit остаётся рядом только для проверок — отсюда видно, насколько развёртку
+  // подняли над вписанной в панель.
+  panoView.last = { base, fit, width: size.width, height: size.height,
     canvasW: p.canvas.width, canvasH: p.canvas.height };
 
   label(ctx, p.canvas.width - 14, 26,
@@ -485,6 +515,7 @@ function updateFourthButton() {
   btn.textContent = fourth === 'panorama' ? '3D' : 'Панорама';
   const name = panes.get('volume')?.name;
   if (name) name.textContent = fourth === 'panorama' ? 'Панорама' : '3D';
+  updateViewButtons();
 }
 
 export function setFourth(mode) {
@@ -494,6 +525,70 @@ export function setFourth(mode) {
   updateFourthButton();
   updateTools();
   drawVolumePane();
+}
+
+/*
+  Готовые ракурсы. Пальцем можно повернуть череп куда угодно, а вернуться к
+  прямому виду — нет: промах в пару градусов заметен, и врач крутит его
+  туда-сюда. На Mac ровно для этого есть пресеты камеры.
+
+  Нули — это вид спереди: базис в volume3d.js задан как «вправо +u, вверх −n,
+  луч +v», то есть при yaw=0 и pitch=0 камера уже смотрит в лицо.
+*/
+const VIEW_PRESETS = {
+  front: { yaw: 0, pitch: 0 },
+  side: { yaw: Math.PI / 2, pitch: 0 },
+  // Не 1.4: там стоит ограничитель поворота, и вид упирался бы в край.
+  top: { yaw: 0, pitch: 1.2 },
+};
+
+let viewAnim = null;
+
+/** Разница углов по короткой дуге: с 350° к 10° — это 20°, а не 340°. */
+function angleDelta(a, b) {
+  let d = (a - b) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
+/** Переход к ракурсу. Плавно: скачок камеры читается как сбой отрисовки. */
+function applyViewPreset(name) {
+  const target = VIEW_PRESETS[name];
+  if (!study || !target || fourth !== 'volume') return;
+  const v = view.volume;
+  const from = { yaw: v.yaw, pitch: v.pitch };
+  const dYaw = -angleDelta(from.yaw, target.yaw);
+  const dPitch = target.pitch - from.pitch;
+  if (viewAnim) cancelAnimationFrame(viewAnim);
+  const t0 = performance.now();
+  const DUR = 280;
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / DUR);
+    const e = 1 - Math.pow(1 - k, 3);
+    v.yaw = from.yaw + dYaw * e;
+    v.pitch = from.pitch + dPitch * e;
+    // Пока идёт переход, считаем объём мельче — как при вращении пальцем.
+    v.moving = k < 1;
+    drawVolumePane();
+    viewAnim = k < 1 ? requestAnimationFrame(step) : null;
+  };
+  viewAnim = requestAnimationFrame(step);
+}
+
+/** Подсветка кнопки ракурса, если камера стоит именно так. */
+function updateViewButtons() {
+  const box = document.getElementById('views');
+  if (!box) return;
+  const on = !!study && fourth === 'volume';
+  box.hidden = !on;
+  if (!on) return;
+  const v = view.volume;
+  for (const btn of box.querySelectorAll('.view-btn')) {
+    const t = VIEW_PRESETS[btn.dataset.view];
+    btn.classList.toggle('is-active',
+      !!t && Math.abs(angleDelta(v.yaw, t.yaw)) < 0.04 && Math.abs(v.pitch - t.pitch) < 0.04);
+  }
 }
 
 function drawGrid(ctx, canvas) {
@@ -628,21 +723,62 @@ function updateTools() {
   for (const btn of document.querySelectorAll('.tool')) {
     const name = btn.dataset.tool;
     const slab = name === 'slab';
-    const usable = !!study && (!slab || (fourth === 'panorama' && !!study.arch));
+    const erase = name === 'erase';
+    let usable = !!study;
+    if (slab) usable = usable && fourth === 'panorama' && !!study.arch;
+    // Стирать нечего — кнопка не должна выглядеть работающей.
+    if (erase) usable = usable && (measures.length > 0 || !!pending);
     btn.disabled = !usable;
-    btn.classList.toggle('is-active', usable && !slab && tool === name);
+    btn.classList.toggle('is-active', usable && !slab && !erase && tool === name);
     if (slab) {
       const span = btn.querySelector('span');
       const mm = study?.arch?.slabMM;
       if (span) span.textContent = usable && mm ? 'Слой ' + (mm < 10 ? mm.toFixed(1) : mm) : 'Слой';
     }
+    if (erase) {
+      const span = btn.querySelector('span');
+      if (span) span.textContent = eraseArmed ? 'Точно?' : 'Стереть';
+      btn.classList.toggle('is-armed', usable && eraseArmed);
+    }
   }
+}
+
+/*
+  Удаление разметки спрашивает подтверждение, как на Mac. Диалога здесь нет
+  намеренно: на телефоне он закрывает снимок целиком ради одного вопроса.
+  Вместо него кнопка взводится первым нажатием и стирает вторым, а через
+  четыре секунды сама возвращается в исходное — промах ничего не стоит.
+*/
+let eraseArmed = false;
+let eraseTimer = null;
+
+function armErase() {
+  if (eraseTimer) clearTimeout(eraseTimer);
+  if (eraseArmed) {
+    eraseArmed = false;
+    eraseTimer = null;
+    clearMeasures();
+    updateTools();
+    return;
+  }
+  eraseArmed = true;
+  eraseTimer = setTimeout(() => { eraseArmed = false; eraseTimer = null; updateTools(); }, 4000);
+  updateTools();
+}
+
+function disarmErase() {
+  if (!eraseArmed) return;
+  if (eraseTimer) clearTimeout(eraseTimer);
+  eraseArmed = false;
+  eraseTimer = null;
 }
 
 function useTool(name) {
   if (!study) return;
+  if (name !== 'erase') disarmErase();
   if (name === 'reset') { resetView(); return; }
   if (name === 'slab') { cycleSlab(); return; }
+  if (name === 'erase') { armErase(); return; }
   tool = tool === name ? 'navigate' : name;
   pending = null;
   updateTools();
@@ -671,6 +807,10 @@ function resetView() {
   crosshair = study.dims.map((n) => (n - 1) / 2);
   study.look = autoWindow(study.histogram, study.series);
   pending = null;
+  // Сброс вида не трогает разметку — но взведённую кнопку удаления снимает:
+  // иначе она осталась бы заряженной на чужое действие.
+  disarmErase();
+  updateTools();
   drawAll();
 }
 
@@ -688,6 +828,7 @@ function resetVolumeLook() {
 export function clearMeasures() {
   measures = [];
   pending = null;
+  updateTools();
   drawAll();
 }
 
@@ -914,7 +1055,7 @@ function capture(canvas, e) {
 function panoPointAt(at) {
   const l = panoView.last;
   if (!l) return { x: 0, y: 0 };
-  const scale = l.fit * panoView.zoom;
+  const scale = l.base * panoView.zoom;
   return {
     x: (at.x - (l.canvasW - l.width * scale) / 2 - panoView.panX) / scale,
     y: (at.y - (l.canvasH - l.height * scale) / 2 - panoView.panY) / scale,
@@ -925,7 +1066,7 @@ function panoPointAt(at) {
 function panoPutUnder(point, at) {
   const l = panoView.last;
   if (!l) return;
-  const scale = l.fit * panoView.zoom;
+  const scale = l.base * panoView.zoom;
   panoView.panX = at.x - point.x * scale - (l.canvasW - l.width * scale) / 2;
   panoView.panY = at.y - point.y * scale - (l.canvasH - l.height * scale) / 2;
 }
@@ -982,6 +1123,7 @@ function tap(plane, at) {
         pending = null;
       }
     }
+    updateTools();   // появилось что стирать — кнопка оживает
     drawPane(plane);
     return;
   }
@@ -1013,6 +1155,12 @@ export function viewerState() {
     measures: measures.map((m) => ({ kind: m.kind, plane: m.plane, text: measureText(m) })),
     zoom: view?.axial?.zoom ?? 1,
     window: { center: study.look.center, width: study.look.width },
+    volume: view?.volume
+      ? { yaw: view.volume.yaw, pitch: view.volume.pitch, zoom: view.volume.zoom }
+      : null,
+    pano: panoView?.last
+      ? { base: panoView.last.base, fit: panoView.last.fit, zoom: panoView.zoom }
+      : null,
   };
 }
 
@@ -1059,13 +1207,14 @@ export function measureAt(plane, points, kind = 'ruler') {
   const map = mapFor(plane);
   const m = { plane, kind, points: points.map(([x, y]) => screenToVoxel(map, x, y)) };
   measures.push(m);
+  updateTools();
   drawPane(plane);
   return measureText(m);
 }
 
 // Опоры для автоматических проверок.
 //
-// Через import их не взять: у './viewer.js?v=0.5.3' и './viewer.js?v=0.5.3'
+// Через import их не взять: у './viewer.js?v=0.6.0' и './viewer.js?v=0.6.0'
 // разные экземпляры модуля, и проверка получила бы пустой просмотр вместо
 // открытого. Номер в адресе меняется каждый выпуск, поэтому проверки
 // цепляются сюда, а не за адрес. Внутренности приложения в браузере и так
