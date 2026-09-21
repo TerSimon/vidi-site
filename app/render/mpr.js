@@ -17,7 +17,7 @@
 //  анатомию, а расчёт сторон лежит в одном месте и проверяется отдельно.
 //
 
-const VERT = `#version 300 es
+export const VERT = `#version 300 es
 in vec2 aPos;
 void main() { gl_Position = vec4(aPos, 0.0, 1.0); }`;
 
@@ -258,7 +258,7 @@ export class MPRRenderer {
   }
 }
 
-function buildProgram(gl, vertSrc, fragSrc) {
+export function buildProgram(gl, vertSrc, fragSrc) {
   const vert = compile(gl, gl.VERTEX_SHADER, vertSrc);
   const frag = compile(gl, gl.FRAGMENT_SHADER, fragSrc);
   if (!vert || !frag) return null;

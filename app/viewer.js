@@ -10,15 +10,24 @@
 //  телефона и уменьшение объёма под память их не сдвигают.
 //
 
-import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.4.3';
-import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen } from './planes.js?v=0.4.3';
-import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.4.3';
-import { buildVolume } from './archive.js?v=0.4.3';
+import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.5.0';
+import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen } from './planes.js?v=0.5.0';
+import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.5.0';
+import { buildVolume } from './archive.js?v=0.5.0';
+import { PanoRenderer } from './render/pano.js?v=0.5.0';
+import { VolumeRenderer } from './render/volume3d.js?v=0.5.0';
+import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.5.0';
+import { patientAxes } from './geometry.js?v=0.5.0';
 
 const $ = (id) => document.getElementById(id);
 
 const panes = new Map();       // plane → { el, canvas, ctx, empty, marks }
 let renderer = null;
+let pano = null;                // развёртка вдоль дуги
+let volume3d = null;            // объёмный вид
+let fourth = 'volume';          // что в четвёртой панели
+let panoFocus = false;          // тонкий слой, пока палец прижат
+let archReason = '';            // почему развёртки нет
 let study = null;              // { geometry, layouts, dims, look, reduction, notes }
 let crosshair = null;          // точка объёма, общая для всех панелей
 let view = null;               // plane → { zoom, panU, panV }
@@ -40,7 +49,7 @@ export function attachViewer() {
       markL: el.querySelector('.mark-l'),
       markR: el.querySelector('.mark-r'),
     });
-    if (plane !== 'volume') bindPointer(plane);
+    if (plane !== 'volume') bindPointer(plane); else bindVolumePointer();
   }
 
   for (const tab of document.querySelectorAll('.plane-tab')) {
@@ -49,6 +58,9 @@ export function attachViewer() {
   for (const btn of document.querySelectorAll('.tool')) {
     btn.addEventListener('click', () => useTool(btn.dataset.tool));
   }
+  document.getElementById('btn-pano')?.addEventListener('click', () => {
+    setFourth(fourth === 'panorama' ? 'volume' : 'panorama');
+  });
 
   const relayout = () => { layoutPanes(); drawAll(); };
   if (typeof ResizeObserver === 'function') {
@@ -113,6 +125,8 @@ export async function showVolume(file, series, { onProgress, signal } = {}) {
   if (!renderer) renderer = MPRRenderer.create();
   if (!renderer || renderer.broken) throw new Error('webgl');
   const gl = renderer.gl;
+  if (!pano) pano = new PanoRenderer(gl);
+  if (!volume3d) volume3d = new VolumeRenderer(gl);
   const shape = chooseReduction(gl, series.columns, series.rows, geometry.order.length,
     memoryBudget());
   if (!shape) throw new Error('too-big');
@@ -137,9 +151,37 @@ export async function showVolume(file, series, { onProgress, signal } = {}) {
   const layouts = {};
   for (const plane of PLANES) layouts[plane] = planeLayout(g, plane);
 
+  // Анатомическое пространство: какая ось объёма идёт вправо пациента, какая
+  // назад, какая вниз. Объёмный вид и развёртка живут в нём, а не в осях
+  // файла — иначе сагиттально записанный снимок встал бы на бок.
+  const ax = layouts.axial;
+  const letters = g.mm ? patientAxes(g) : null;
+  const axisLetter = [letters?.i, letters?.j, letters?.k];
+  const vox = [g.voxel.i, g.voxel.j, g.voxel.k];
+  const space = {
+    axes: { u: ax.u.axis, v: ax.v.axis, n: ax.n },
+    flip: {
+      u: ax.u.flip,
+      v: ax.v.flip,
+      // Высота считается сверху вниз: если номер среза растёт к макушке,
+      // порядок переворачиваем, иначе голова окажется внизу.
+      n: axisLetter[ax.n] === 'S',
+    },
+    voxel: { u: vox[ax.u.axis], v: vox[ax.v.axis], n: vox[ax.n] },
+    sizeMM: {
+      u: dims[ax.u.axis] * vox[ax.u.axis],
+      v: dims[ax.v.axis] * vox[ax.v.axis],
+      n: dims[ax.n] * vox[ax.n],
+    },
+    signed: !!series.signed,
+    slope: Number.isFinite(series.slope) ? series.slope : 1,
+    intercept: Number.isFinite(series.intercept) ? series.intercept : 0,
+  };
+
   study = {
     geometry: g,
     layouts,
+    space,
     dims,
     series,
     reduction: { xy: shape.stepXY, z: shape.stepZ },
@@ -151,14 +193,71 @@ export async function showVolume(file, series, { onProgress, signal } = {}) {
   crosshair = dims.map((n) => (n - 1) / 2);
   view = {};
   for (const plane of PLANES) view[plane] = { zoom: 1, panU: 0, panV: 0 };
+  // Порог кости подбирается от окна: у конусно-лучевых снимков шкала плавает,
+  // и постоянные 300 HU на одном аппарате дают череп, на другом — туман.
+  view.volume = {
+    yaw: 0, pitch: 0, zoom: 1, moving: false,
+    threshold: null, softness: null,
+  };
+  resetVolumeLook();
   measures = [];
   pending = null;
   tool = 'navigate';
+  study.arch = prepareArch();
+  fourth = 'volume';
+  updateFourthButton();
   updateTools();
   applyMarks();
   layoutPanes();
   drawAll();
   return study;
+}
+
+/**
+ * Подбирает дугу по самому снимку и готовит колонки развёртки.
+ *
+ * Проекция считается на видеокарте и возвращается обратно упакованной: держать
+ * копию объёма в памяти ради дуги нельзя. Развороты сторон применяются здесь —
+ * дальше дуга живёт в координатах аксиального вида, где вправо это левая
+ * сторона пациента, а вниз — затылок.
+ */
+function prepareArch() {
+  if (!study.geometry.mm) return fail('без размера точки дугу не построить');
+  if (!pano || pano.broken) return fail('браузер не собрал расчёт развёртки');
+  const { space, dims } = study;
+  const raw = pano.axialMIP(renderer.texture, dims, space.axes, space.signed);
+  if (!raw) return fail('видеокарта не дала посчитать проекцию');
+
+  const { width, height } = raw;
+  const image = new Int32Array(width * height);
+  for (let y = 0; y < height; y++) {
+    const sy = space.flip.v ? height - 1 - y : y;
+    for (let x = 0; x < width; x++) {
+      const sx = space.flip.u ? width - 1 - x : x;
+      image[y * width + x] = raw.data[sy * width + sx];
+    }
+  }
+
+  const size = { u: space.sizeMM.u, v: space.sizeMM.v };
+  const control = fitArch({ data: image, width, height }, size,
+    { slope: space.slope, intercept: space.intercept });
+
+  // Шаг развёртки — самая мелкая точка объёма: мельче неё подробностей нет,
+  // крупнее — теряем то, что есть.
+  const pixelMM = Math.max(0.15, Math.min(space.voxel.u, space.voxel.v, space.voxel.n));
+  const columns = sampledColumns(control, pixelMM);
+  if (!columns.points.length) return fail('дуга вышла вырожденной');
+  if (!pano.setColumns(columns.points, columns.normals)) return fail('колонки не легли в память видеокарты');
+
+  archReason = '';
+  return { control, pixelMM, lengthMM: columns.lengthMM, columns, slabMM: SLAB_MM };
+}
+
+/** Почему развёртки не будет. Молчаливо выключенная кнопка — это загадка. */
+function fail(reason) {
+  archReason = reason;
+  console.warn('[панорама] ' + reason);
+  return null;
 }
 
 /** Убирает объём с экрана и освобождает память видеокарты. */
@@ -167,7 +266,11 @@ export function clearVolume() {
   crosshair = null;
   measures = [];
   pending = null;
+  fourth = 'volume';
+  panoFocus = false;
+  pano?.dispose();
   renderer?.dispose();
+  updateFourthButton();
   for (const p of panes.values()) {
     p.empty.hidden = false;
     p.ctx?.clearRect(0, 0, p.canvas.width, p.canvas.height);
@@ -267,12 +370,107 @@ function drawPane(plane) {
   drawScale(ctx, p.canvas, map);
 }
 
-/** Третья панель пока без объёмной картинки — она на следующем этапе. */
+/** Четвёртая панель: объёмный вид или развёртка вдоль дуги. */
 function drawVolumePane() {
   const p = panes.get('volume');
   if (!p || p.el.offsetParent === null || !p.ctx) return;
-  p.empty.hidden = !!study;
-  drawGrid(p.ctx, p.canvas);
+  const ctx = p.ctx;
+  if (!study) {
+    p.empty.hidden = false;
+    drawGrid(ctx, p.canvas);
+    return;
+  }
+  p.empty.hidden = true;
+  ctx.clearRect(0, 0, p.canvas.width, p.canvas.height);
+  if (fourth === 'panorama' && study.arch) drawPanorama(p, ctx);
+  else drawVolume3D(p, ctx);
+}
+
+function drawPanorama(p, ctx) {
+  const a = study.arch;
+  const slab = panoFocus ? FOCUS_MM : a.slabMM;
+  // Развёртка берёт максимум по толщине слоя, поэтому она ярче обычного среза
+  // на всю толщину. Окно, подобранное по срезам, пересвечивает её: сдвигаем
+  // его вверх тем сильнее, чем толще слой.
+  const lift = Math.min(0.35, 0.02 * slab);
+  const look = { ...study.look, center: study.look.center + study.look.width * lift };
+  const size = pano.render(renderer.canvas, renderer.texture, study.dims, {
+    axes: study.space.axes,
+    flip: study.space.flip,
+    voxel: study.space.voxel,
+    heightMM: study.space.sizeMM.n,
+    pixelMM: a.pixelMM,
+    slabMM: slab,
+  }, look);
+  if (!size) { drawGrid(ctx, p.canvas); return; }
+
+  const scale = Math.min(p.canvas.width / size.width, p.canvas.height / size.height);
+  const w = size.width * scale;
+  const h = size.height * scale;
+  ctx.drawImage(renderer.canvas, (p.canvas.width - w) / 2, (p.canvas.height - h) / 2, w, h);
+
+  label(ctx, p.canvas.width - 14, 26,
+    'слой ' + (slab < 10 ? slab.toFixed(1) : Math.round(slab)) + ' мм' +
+    (panoFocus ? '' : ' · держите, чтобы истончить'), 'right', 0.85);
+}
+
+function drawVolume3D(p, ctx) {
+  const v = view.volume;
+  const finest = Math.min(study.space.voxel.u, study.space.voxel.v, study.space.voxel.n);
+  // Пока крутят — шаг грубее: важна плавность. Отпустили — мельче: разглядывают
+  // неподвижную картинку.
+  const step = v.moving ? Math.max(1.2, finest * 4) : Math.max(0.45, finest * 1.5);
+  // Объём считается лучами, и цена кадра — это число точек экрана. Плотность
+  // экрана телефона тут не помощник: на объёмной картинке лишние пиксели не
+  // видны, а работы прибавляют вчетверо. Поэтому считаем в ограниченном
+  // размере и растягиваем.
+  const cap = v.moving ? 380 : 640;
+  const longest = Math.max(p.canvas.width, p.canvas.height);
+  const scale = Math.min(1, cap / longest);
+  const w = Math.max(1, Math.round(p.canvas.width * scale));
+  const h = Math.max(1, Math.round(p.canvas.height * scale));
+  if (renderer.canvas.width !== w || renderer.canvas.height !== h) {
+    renderer.canvas.width = w;
+    renderer.canvas.height = h;
+  }
+  const size = volume3d.render(renderer.canvas, renderer.texture, study.dims, {
+    axes: study.space.axes,
+    flip: study.space.flip,
+    voxel: study.space.voxel,
+    sizeMM: study.space.sizeMM,
+    signed: study.space.signed,
+    slope: study.space.slope,
+    intercept: study.space.intercept,
+  }, {
+    yaw: v.yaw, pitch: v.pitch, zoom: v.zoom,
+    stepMM: step,
+    threshold: v.threshold,
+    softness: v.softness,
+  });
+  if (!size) { drawGrid(ctx, p.canvas); return; }
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(renderer.canvas, 0, 0, p.canvas.width, p.canvas.height);
+}
+
+/** Кнопка переключения четвёртой панели. */
+function updateFourthButton() {
+  const btn = document.getElementById('btn-pano');
+  if (!btn) return;
+  const canPano = !!study?.arch;
+  btn.disabled = !canPano;
+  btn.title = canPano ? '' : (archReason || 'развёртка недоступна');
+  btn.textContent = fourth === 'panorama' ? '3D' : 'Панорама';
+  const name = panes.get('volume')?.name;
+  if (name) name.textContent = fourth === 'panorama' ? 'Панорама' : '3D';
+}
+
+export function setFourth(mode) {
+  if (!study) return;
+  if (mode === 'panorama' && !study.arch) return;
+  fourth = mode;
+  panoFocus = false;
+  updateFourthButton();
+  drawVolumePane();
 }
 
 function drawGrid(ctx, canvas) {
@@ -423,10 +621,24 @@ function useTool(name) {
 
 function resetView() {
   for (const plane of PLANES) view[plane] = { zoom: 1, panU: 0, panV: 0 };
+  view.volume.yaw = 0;
+  view.volume.pitch = 0;
+  view.volume.zoom = 1;
+  resetVolumeLook();
   crosshair = study.dims.map((n) => (n - 1) / 2);
   study.look = autoWindow(study.histogram, study.series);
   pending = null;
   drawAll();
+}
+
+/**
+ * Плотность, с которой начинается кость. Берём по окну самого снимка: нижняя
+ * граница окна — это мягкие ткани, верхняя — эмаль, кость между ними.
+ */
+function resetVolumeLook() {
+  const low = study.look.center - study.look.width / 2;
+  view.volume.threshold = low + study.look.width * 0.55;
+  view.volume.softness = Math.max(150, study.look.width * 0.12);
 }
 
 /** Убрать всю разметку. Отдельно от сброса вида: это разные действия. */
@@ -437,6 +649,9 @@ export function clearMeasures() {
 }
 
 // ─── Рука врача ────────────────────────────────────────────────────────────
+
+const SLAB_MM = 25;            // обычная толщина развёртки
+const FOCUS_MM = 1.5;          // по удержанию — тонкий срез по самой дуге
 
 const MOVE_THRESHOLD = 6;      // меньше — это касание, а не движение
 
@@ -525,6 +740,71 @@ function bindPointer(plane) {
   canvas.addEventListener('pointercancel', (e) => { points.delete(e.pointerId); drag = null; });
 }
 
+/**
+ * Объёмный вид вращают пальцем, развёртку — прижимают.
+ *
+ * Удержание на развёртке делает слой тонким: толстый показывает весь зубной
+ * ряд разом, тонкий режет ровно по дуге. На Mac это тот же жест.
+ */
+function bindVolumePointer() {
+  const p = panes.get('volume');
+  const canvas = p.canvas;
+  const points = new Map();
+  let drag = null;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!study) return;
+    canvas.setPointerCapture(e.pointerId);
+    points.set(e.pointerId, pos(canvas, e));
+    if (fourth === 'panorama') {
+      panoFocus = true;
+      drawVolumePane();
+      return;
+    }
+    if (points.size === 1) {
+      drag = { start: pos(canvas, e), yaw: view.volume.yaw, pitch: view.volume.pitch };
+      view.volume.moving = true;
+    } else if (points.size === 2) {
+      const [a, b] = [...points.values()];
+      drag = { pinch: Math.hypot(a.x - b.x, a.y - b.y), zoom: view.volume.zoom };
+      view.volume.moving = true;
+    }
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!study || !points.has(e.pointerId) || fourth === 'panorama') return;
+    points.set(e.pointerId, pos(canvas, e));
+    if (!drag) return;
+
+    if (drag.pinch) {
+      const [a, b] = [...points.values()];
+      const now = Math.hypot(a.x - b.x, a.y - b.y);
+      if (drag.pinch > 4) view.volume.zoom = Math.min(6, Math.max(0.5, drag.zoom * now / drag.pinch));
+      drawVolumePane();
+      return;
+    }
+    const here = pos(canvas, e);
+    // Пол-экрана — полоборота: так же, как на Mac после ручной настройки.
+    view.volume.yaw = drag.yaw + (here.x - drag.start.x) / canvas.width * Math.PI * 2;
+    view.volume.pitch = Math.max(-1.4, Math.min(1.4,
+      drag.pitch + (here.y - drag.start.y) / canvas.height * Math.PI));
+    drawVolumePane();
+  });
+
+  const release = (e) => {
+    points.delete(e.pointerId);
+    if (points.size > 0) return;
+    drag = null;
+    if (panoFocus) { panoFocus = false; drawVolumePane(); return; }
+    if (view.volume?.moving) {
+      view.volume.moving = false;
+      drawVolumePane();   // отпустили — перерисовываем мелким шагом
+    }
+  };
+  canvas.addEventListener('pointerup', release);
+  canvas.addEventListener('pointercancel', release);
+}
+
 function pos(canvas, e) {
   const rect = canvas.getBoundingClientRect();
   const scale = canvas.width / Math.max(1, rect.width);
@@ -565,6 +845,9 @@ function tap(plane, at) {
 export function viewerState() {
   if (!study) return null;
   return {
+    arch: study.arch ? { lengthMM: study.arch.lengthMM, pixelMM: study.arch.pixelMM } : null,
+    archReason,
+    fourth,
     dims: study.dims,
     reduction: study.reduction,
     mm: study.geometry.mm,
@@ -574,6 +857,19 @@ export function viewerState() {
     measures: measures.map((m) => ({ kind: m.kind, plane: m.plane, text: measureText(m) })),
     window: { center: study.look.center, width: study.look.width },
   };
+}
+
+/** Для проверок: сколько занимает один кадр четвёртой панели, мс. */
+export function timeFourth(mode, frames = 3) {
+  if (!study) return null;
+  setFourth(mode);
+  const t0 = performance.now();
+  for (let i = 0; i < frames; i++) drawVolumePane();
+  // Рисование в WebGL отложенное: без чтения пикселя замер показал бы ноль.
+  const gl = renderer.gl;
+  const probe = new Uint8Array(4);
+  gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, probe);
+  return (performance.now() - t0) / frames;
 }
 
 /** Для проверок: точка объёма → точка экрана на этой панели. */
@@ -606,11 +902,12 @@ export function measureAt(plane, points, kind = 'ruler') {
 
 // Опоры для автоматических проверок.
 //
-// Через import их не взять: у './viewer.js?v=0.4.3' и './viewer.js?v=0.4.3'
+// Через import их не взять: у './viewer.js?v=0.5.0' и './viewer.js?v=0.5.0'
 // разные экземпляры модуля, и проверка получила бы пустой просмотр вместо
 // открытого. Номер в адресе меняется каждый выпуск, поэтому проверки
 // цепляются сюда, а не за адрес. Внутренности приложения в браузере и так
 // открыты — тайны тут нет.
 globalThis.__vidiViewer = {
   state: viewerState, paneMap, toScreen, measureAt, setZoom, selectPlane, clearMeasures,
+  setFourth, timeFourth,
 };
