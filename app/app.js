@@ -11,10 +11,10 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, describeHolder, SEAT_PING_MS,
-} from './auth.js?v=2';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=1';
+} from './auth.js?v=0.4.1';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=0.4.1';
 
-const VERSION = '0.4.0';
+const VERSION = '0.4.1';
 const STAGE = 'снимки';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
