@@ -10,14 +10,14 @@
 //  телефона и уменьшение объёма под память их не сдвигают.
 //
 
-import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.5.1';
-import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen } from './planes.js?v=0.5.1';
-import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.5.1';
-import { buildVolume } from './archive.js?v=0.5.1';
-import { PanoRenderer } from './render/pano.js?v=0.5.1';
-import { VolumeRenderer } from './render/volume3d.js?v=0.5.1';
-import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.5.1';
-import { patientAxes } from './geometry.js?v=0.5.1';
+import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.5.2';
+import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen } from './planes.js?v=0.5.2';
+import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.5.2';
+import { buildVolume } from './archive.js?v=0.5.2';
+import { PanoRenderer } from './render/pano.js?v=0.5.2';
+import { VolumeRenderer } from './render/volume3d.js?v=0.5.2';
+import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.5.2';
+import { patientAxes } from './geometry.js?v=0.5.2';
 
 const $ = (id) => document.getElementById(id);
 
@@ -696,7 +696,7 @@ function bindPointer(plane) {
 
   canvas.addEventListener('pointerdown', (e) => {
     if (!study) return;
-    canvas.setPointerCapture(e.pointerId);
+    capture(canvas, e);
     points.set(e.pointerId, pos(canvas, e));
     if (points.size === 1) {
       drag = { start: pos(canvas, e), moved: false, index: crosshair[study.layouts[plane].n],
@@ -717,8 +717,10 @@ function bindPointer(plane) {
     if (!study || !points.has(e.pointerId)) return;
     points.set(e.pointerId, pos(canvas, e));
 
-    if (points.size >= 2 && drag?.pinch) {
-      const [a, b] = [...points.values()];
+    if (drag?.pinch) {
+      const two = [...points.values()];
+      if (two.length < 2) return;
+      const [a, b] = two;
       const now = Math.hypot(a.x - b.x, a.y - b.y);
       if (drag.pinch > 4) {
         view[plane].zoom = Math.min(8, Math.max(1, drag.zoom * now / drag.pinch));
@@ -762,9 +764,9 @@ function bindPointer(plane) {
   });
 
   const end = (e) => {
-    if (!study) return;
-    const wasDrag = drag;
     points.delete(e.pointerId);
+    if (!study) { drag = null; return; }
+    const wasDrag = drag;
     if (points.size === 0) drag = null;
     if (!wasDrag || wasDrag.moved || wasDrag.pinch) return;
     tap(plane, pos(canvas, e));
@@ -787,7 +789,7 @@ function bindVolumePointer() {
 
   canvas.addEventListener('pointerdown', (e) => {
     if (!study) return;
-    canvas.setPointerCapture(e.pointerId);
+    capture(canvas, e);
     points.set(e.pointerId, pos(canvas, e));
     if (fourth === 'panorama') {
       if (points.size === 1) {
@@ -815,8 +817,10 @@ function bindVolumePointer() {
 
     if (fourth === 'panorama') {
       if (drag.pinch) {
-        const [a, b] = [...points.values()];
-        const now = Math.hypot(a.x - b.x, a.y - b.y);
+        // Один палец убрали посреди щипка — второму продолжать нечего.
+        const two = [...points.values()];
+        if (two.length < 2) return;
+        const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
         if (drag.pinch > 4) panoView.zoom = Math.min(8, Math.max(1, drag.zoom * now / drag.pinch));
       } else {
         const here = pos(canvas, e);
@@ -828,8 +832,9 @@ function bindVolumePointer() {
     }
 
     if (drag.pinch) {
-      const [a, b] = [...points.values()];
-      const now = Math.hypot(a.x - b.x, a.y - b.y);
+      const two = [...points.values()];
+      if (two.length < 2) return;
+      const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
       if (drag.pinch > 4) view.volume.zoom = Math.min(6, Math.max(0.5, drag.zoom * now / drag.pinch));
       drawVolumePane();
       return;
@@ -846,6 +851,7 @@ function bindVolumePointer() {
     points.delete(e.pointerId);
     if (points.size > 0) return;
     drag = null;
+    if (!study || !view) return;
     if (fourth === 'panorama') return;
     if (view.volume?.moving) {
       view.volume.moving = false;
@@ -854,6 +860,19 @@ function bindVolumePointer() {
   };
   canvas.addEventListener('pointerup', release);
   canvas.addEventListener('pointercancel', release);
+}
+
+/**
+ * Захват указателя необязателен: жест работает и без него, пока палец на
+ * экране. Safari же бросает, если касание успело завершиться, и это
+ * исключение всплывало наверх — врач видел «Не получилось» на ровном месте.
+ */
+function capture(canvas, e) {
+  try {
+    canvas.setPointerCapture(e.pointerId);
+  } catch (err) {
+    // Не беда: без захвата события всё равно доходят до этого canvas.
+  }
 }
 
 function pos(canvas, e) {
@@ -958,7 +977,7 @@ export function measureAt(plane, points, kind = 'ruler') {
 
 // Опоры для автоматических проверок.
 //
-// Через import их не взять: у './viewer.js?v=0.5.1' и './viewer.js?v=0.5.1'
+// Через import их не взять: у './viewer.js?v=0.5.2' и './viewer.js?v=0.5.2'
 // разные экземпляры модуля, и проверка получила бы пустой просмотр вместо
 // открытого. Номер в адресе меняется каждый выпуск, поэтому проверки
 // цепляются сюда, а не за адрес. Внутренности приложения в браузере и так

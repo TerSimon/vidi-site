@@ -12,7 +12,7 @@
 //  пациента, даже если объём записан сагиттально.
 //
 
-import { VERT, buildProgram } from './mpr.js?v=0.5.1';
+import { VERT, buildProgram } from './mpr.js?v=0.5.2';
 
 const FRAG = `#version 300 es
 precision highp float;
@@ -65,6 +65,13 @@ float atMM(vec3 mm) {
         mix(atVoxel(c + ivec3(0, 1, 1)), atVoxel(c + ivec3(1, 1, 1)), t.x), t.y), t.z);
 }
 
+/**
+ * Псевдослучайное число по точке экрана. Нужно, чтобы сдвинуть начало луча.
+ */
+float dither(vec2 p) {
+  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
 /** Непрозрачность по плотности: мягкое ткани — прозрачно, кость — плотно. */
 float opacityOf(float hu) {
   return smoothstep(uThreshold, uThreshold + max(1.0, uWidth), hu);
@@ -101,6 +108,12 @@ void main() {
   float exit = min(min(tmax.x, tmax.y), tmax.z);
   if (exit <= enter) { frag = vec4(0.0, 0.0, 0.0, 1.0); return; }
   enter = max(enter, 0.0);
+
+  // Сдвигаем начало луча на случайную долю шага. Без этого все лучи берут
+  // пробы на одних и тех же глубинах, и объём покрывается ровными полосами —
+  // они особенно заметны при вращении, где шаг грубее. Сдвиг превращает
+  // полосу в незаметную рябь.
+  enter += dither(gl_FragCoord.xy) * uStepMM;
 
   vec3 colour = vec3(0.0);
   float alpha = 0.0;

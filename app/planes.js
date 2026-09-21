@@ -12,7 +12,7 @@
 //  сторону наугад — значит однажды оперировать не ту.
 //
 
-import { patientAxes } from './geometry.js?v=0.5.1';
+import { patientAxes } from './geometry.js?v=0.5.2';
 
 export const PLANES = ['axial', 'sagittal', 'coronal'];
 
