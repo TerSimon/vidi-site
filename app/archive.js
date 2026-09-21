@@ -65,7 +65,7 @@ function runWorker(message, { onProgress, signal }, handle) {
     if (signal?.aborted) { reject(new ArchiveCancelled()); return; }
     let worker;
     try {
-      worker = new Worker(new URL('./archive/worker.js?v=0.5.0', import.meta.url), { type: 'module' });
+      worker = new Worker(new URL('./archive/worker.js?v=0.5.1', import.meta.url), { type: 'module' });
     } catch (e) {
       reject(new ArchiveError('ARC-6', 'Браузер не смог запустить распаковку.'));
       return;

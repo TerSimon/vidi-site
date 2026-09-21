@@ -10,7 +10,7 @@
 //  оказаться. Точность при этом не теряется: значение DICOM 16-битное.
 //
 
-import { VERT, buildProgram } from './mpr.js?v=0.5.0';
+import { VERT, buildProgram } from './mpr.js?v=0.5.1';
 
 // Проекция максимальной яркости вдоль оси, поперечной аксиальному виду.
 // Берётся средняя треть объёма: там челюсть, а выше и ниже — свод черепа и
@@ -74,6 +74,7 @@ uniform vec3 uVoxel;             // размер точки вдоль u, v и �
 uniform float uHeightMM;
 uniform float uPixelMM;
 uniform float uSlabMM;
+uniform float uSlabStepMM;
 uniform float uHeightPx;
 uniform float uSigned;
 uniform float uSlope;
@@ -84,12 +85,22 @@ uniform float uInvert;
 
 out vec4 frag;
 
-float atVoxel(vec3 idx) {
-  ivec3 c = ivec3(floor(idx + 0.5));
+float at(ivec3 c) {
   c = clamp(c, ivec3(0), uDims - ivec3(1));
   float v = float(texelFetch(uVol, c, 0).r);
   if (uSigned > 0.5 && v >= 32768.0) v -= 65536.0;
   return v * uSlope + uIntercept;
+}
+
+float atVoxel(vec3 idx) {
+  vec3 f = floor(idx);
+  vec3 t = idx - f;
+  ivec3 c = ivec3(f);
+  return mix(
+    mix(mix(at(c + ivec3(0, 0, 0)), at(c + ivec3(1, 0, 0)), t.x),
+        mix(at(c + ivec3(0, 1, 0)), at(c + ivec3(1, 1, 0)), t.x), t.y),
+    mix(mix(at(c + ivec3(0, 0, 1)), at(c + ivec3(1, 0, 1)), t.x),
+        mix(at(c + ivec3(0, 1, 1)), at(c + ivec3(1, 1, 1)), t.x), t.y), t.z);
 }
 
 // Номер точки объёма по координате в миллиметрах вида. Развороты сторон
@@ -111,19 +122,27 @@ void main() {
   float zMM = (row + 0.5) * uPixelMM;
   if (zMM > uHeightMM) { frag = vec4(0.0, 0.0, 0.0, 1.0); return; }
 
-  int steps = uSlabMM > uPixelMM ? int(uSlabMM / uPixelMM) : 1;
-  float halfSlab = float(steps - 1) * uPixelMM * 0.5;
+  // Шаг поперёк дуги — размер точки объёма, а не размер точки картинки.
+  // Связав их, получаем 250 выборок на пиксель при слое 25 мм: развёртка
+  // считалась две секунды, и вся подробность уходила в никуда.
+  int steps = uSlabMM > uSlabStepMM ? int(uSlabMM / uSlabStepMM) : 1;
+  steps = min(steps, 192);
+  float halfSlab = float(steps - 1) * uSlabStepMM * 0.5;
+
+  // Толстый слой — это максимум по многим выборкам, он сам по себе гладкий:
+  // сглаживать каждую выборку значило бы платить восьмикратно за незаметное.
+  bool fine = steps <= 4;
 
   float best = -1e9;
-  for (int t = 0; t < 256; t++) {
+  for (int t = 0; t < 192; t++) {
     if (t >= steps) break;
-    float off = steps == 1 ? 0.0 : (float(t) * uPixelMM - halfSlab);
+    float off = steps == 1 ? 0.0 : (float(t) * uSlabStepMM - halfSlab);
     vec2 q = p + n * off;
     vec3 idx = vec3(0.0);
     idx[uAxisU] = indexOf(q.x, uVoxel.x, uAxisU, uFlipU);
     idx[uAxisV] = indexOf(q.y, uVoxel.y, uAxisV, uFlipV);
     idx[uAxisN] = indexOf(zMM, uVoxel.z, uAxisN, uFlipN);
-    best = max(best, atVoxel(idx));
+    best = max(best, fine ? atVoxel(idx) : at(ivec3(floor(idx + 0.5))));
   }
 
   float g = clamp((best - uLow) / uSpan, 0.0, 1.0);
@@ -249,6 +268,7 @@ export class PanoRenderer {
     gl.uniform1f(u('uHeightMM'), geom.heightMM);
     gl.uniform1f(u('uPixelMM'), geom.pixelMM);
     gl.uniform1f(u('uSlabMM'), geom.slabMM);
+    gl.uniform1f(u('uSlabStepMM'), geom.slabStepMM);
     gl.uniform1f(u('uHeightPx'), height);
     gl.uniform1f(u('uSigned'), look.signed ? 1 : 0);
     gl.uniform1f(u('uSlope'), look.slope);

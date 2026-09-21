@@ -12,7 +12,7 @@
 //  пациента, даже если объём записан сагиттально.
 //
 
-import { VERT, buildProgram } from './mpr.js?v=0.5.0';
+import { VERT, buildProgram } from './mpr.js?v=0.5.1';
 
 const FRAG = `#version 300 es
 precision highp float;
@@ -39,16 +39,30 @@ uniform float uWidth;        // на сколько HU набирается по
 
 out vec4 frag;
 
+float atVoxel(ivec3 c) {
+  c = clamp(c, ivec3(0), uDims - ivec3(1));
+  float v = float(texelFetch(uVol, c, 0).r);
+  if (uSigned > 0.5 && v >= 32768.0) v -= 65536.0;
+  return v * uSlope + uIntercept;
+}
+
 float atMM(vec3 mm) {
   vec3 i = mm / uVoxel;
   vec3 idx = vec3(0.0);
   idx[uAxisU] = uFlip.x > 0.5 ? float(uDims[uAxisU] - 1) - i.x : i.x;
   idx[uAxisV] = uFlip.y > 0.5 ? float(uDims[uAxisV] - 1) - i.y : i.y;
   idx[uAxisN] = uFlip.z > 0.5 ? float(uDims[uAxisN] - 1) - i.z : i.z;
-  ivec3 c = clamp(ivec3(floor(idx + 0.5)), ivec3(0), uDims - ivec3(1));
-  float v = float(texelFetch(uVol, c, 0).r);
-  if (uSigned > 0.5 && v >= 32768.0) v -= 65536.0;
-  return v * uSlope + uIntercept;
+
+  // Трилинейно. По ближайшей точке поверхность идёт ступеньками, и на
+  // объёмной картинке они читаются как продольные полосы по всему черепу.
+  vec3 f = floor(idx);
+  vec3 t = idx - f;
+  ivec3 c = ivec3(f);
+  return mix(
+    mix(mix(atVoxel(c + ivec3(0, 0, 0)), atVoxel(c + ivec3(1, 0, 0)), t.x),
+        mix(atVoxel(c + ivec3(0, 1, 0)), atVoxel(c + ivec3(1, 1, 0)), t.x), t.y),
+    mix(mix(atVoxel(c + ivec3(0, 0, 1)), atVoxel(c + ivec3(1, 0, 1)), t.x),
+        mix(atVoxel(c + ivec3(0, 1, 1)), atVoxel(c + ivec3(1, 1, 1)), t.x), t.y), t.z);
 }
 
 /** Непрозрачность по плотности: мягкое ткани — прозрачно, кость — плотно. */
@@ -61,7 +75,10 @@ void main() {
   // размеры на картинке не должны зависеть от того, что ближе к глазу.
   vec2 ndc = (gl_FragCoord.xy / uViewport) * 2.0 - 1.0;
   float aspect = uViewport.x / uViewport.y;
-  float halfSize = 0.5 * max(max(uSizeMM.x, uSizeMM.y), uSizeMM.z) / uZoom;
+  // На узкой панели видимая ширина меньше высоты, и объём обрезался по бокам.
+  // Вписываем по той стороне, которой не хватает.
+  float fit = min(1.0, aspect);
+  float halfSize = 0.5 * max(max(uSizeMM.x, uSizeMM.y), uSizeMM.z) / fit / uZoom;
   vec3 center = uSizeMM * 0.5;
 
   vec3 right = uRotation * vec3(1.0, 0.0, 0.0);
@@ -92,7 +109,10 @@ void main() {
     if (t > exit || alpha > 0.98) break;
     vec3 pos = origin + dir * t;
     float hu = atMM(pos);
-    float a = opacityOf(hu);
+    float aRef = opacityOf(hu);
+    // Пересчёт на настоящий шаг: столько же вещества, пройденного быстрее,
+    // должно дать ту же непрозрачность.
+    float a = 1.0 - pow(1.0 - aRef * 0.5, uStepMM / 0.5);
     if (a > 0.003) {
       // Нормаль по разнице плотностей вокруг точки: даёт объём, без неё
       // картинка выглядит плоским туманом.
@@ -104,11 +124,11 @@ void main() {
       float glen = length(grad);
       vec3 normal = glen > 1e-4 ? -grad / glen : -dir;
       float lambert = max(0.10, dot(normal, -dir));
-      vec3 tone = mix(vec3(0.85, 0.80, 0.72), vec3(1.0, 0.98, 0.94), a);
+      // Кость тёплая, как на снимке в кабинете, а не синевато-серая.
+      vec3 tone = mix(vec3(0.78, 0.72, 0.62), vec3(1.0, 0.96, 0.89), aRef);
       vec3 lit = tone * lambert;
-      float weight = a * uStepMM * 1.5;
-      colour += (1.0 - alpha) * lit * weight;
-      alpha += (1.0 - alpha) * weight;
+      colour += (1.0 - alpha) * lit * a;
+      alpha += (1.0 - alpha) * a;
     }
   }
 

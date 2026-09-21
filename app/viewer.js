@@ -10,14 +10,14 @@
 //  телефона и уменьшение объёма под память их не сдвигают.
 //
 
-import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.5.0';
-import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen } from './planes.js?v=0.5.0';
-import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.5.0';
-import { buildVolume } from './archive.js?v=0.5.0';
-import { PanoRenderer } from './render/pano.js?v=0.5.0';
-import { VolumeRenderer } from './render/volume3d.js?v=0.5.0';
-import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.5.0';
-import { patientAxes } from './geometry.js?v=0.5.0';
+import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.5.1';
+import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen } from './planes.js?v=0.5.1';
+import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.5.1';
+import { buildVolume } from './archive.js?v=0.5.1';
+import { PanoRenderer } from './render/pano.js?v=0.5.1';
+import { VolumeRenderer } from './render/volume3d.js?v=0.5.1';
+import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.5.1';
+import { patientAxes } from './geometry.js?v=0.5.1';
 
 const $ = (id) => document.getElementById(id);
 
@@ -26,7 +26,7 @@ let renderer = null;
 let pano = null;                // развёртка вдоль дуги
 let volume3d = null;            // объёмный вид
 let fourth = 'volume';          // что в четвёртой панели
-let panoFocus = false;          // тонкий слой, пока палец прижат
+let panoView = null;            // увеличение и сдвиг развёртки
 let archReason = '';            // почему развёртки нет
 let study = null;              // { geometry, layouts, dims, look, reduction, notes }
 let crosshair = null;          // точка объёма, общая для всех панелей
@@ -200,10 +200,12 @@ export async function showVolume(file, series, { onProgress, signal } = {}) {
     threshold: null, softness: null,
   };
   resetVolumeLook();
+  updateTools();
   measures = [];
   pending = null;
   tool = 'navigate';
   study.arch = prepareArch();
+  panoView = { zoom: 1, panX: 0, panY: 0 };
   fourth = 'volume';
   updateFourthButton();
   updateTools();
@@ -244,13 +246,13 @@ function prepareArch() {
 
   // Шаг развёртки — самая мелкая точка объёма: мельче неё подробностей нет,
   // крупнее — теряем то, что есть.
-  const pixelMM = Math.max(0.15, Math.min(space.voxel.u, space.voxel.v, space.voxel.n));
+  const pixelMM = Math.max(0.12, Math.min(space.voxel.u, space.voxel.v, space.voxel.n));
   const columns = sampledColumns(control, pixelMM);
   if (!columns.points.length) return fail('дуга вышла вырожденной');
   if (!pano.setColumns(columns.points, columns.normals)) return fail('колонки не легли в память видеокарты');
 
   archReason = '';
-  return { control, pixelMM, lengthMM: columns.lengthMM, columns, slabMM: SLAB_MM };
+  return { control, pixelMM, lengthMM: columns.lengthMM, columns, slabMM: SLAB_STEPS[0] };
 }
 
 /** Почему развёртки не будет. Молчаливо выключенная кнопка — это загадка. */
@@ -267,7 +269,7 @@ export function clearVolume() {
   measures = [];
   pending = null;
   fourth = 'volume';
-  panoFocus = false;
+  panoView = null;
   pano?.dispose();
   renderer?.dispose();
   updateFourthButton();
@@ -388,7 +390,7 @@ function drawVolumePane() {
 
 function drawPanorama(p, ctx) {
   const a = study.arch;
-  const slab = panoFocus ? FOCUS_MM : a.slabMM;
+  const slab = a.slabMM;
   // Развёртка берёт максимум по толщине слоя, поэтому она ярче обычного среза
   // на всю толщину. Окно, подобранное по срезам, пересвечивает её: сдвигаем
   // его вверх тем сильнее, чем толще слой.
@@ -401,17 +403,28 @@ function drawPanorama(p, ctx) {
     heightMM: study.space.sizeMM.n,
     pixelMM: a.pixelMM,
     slabMM: slab,
+    slabStepMM: Math.max(0.15, Math.min(study.space.voxel.u, study.space.voxel.v)),
   }, look);
   if (!size) { drawGrid(ctx, p.canvas); return; }
 
-  const scale = Math.min(p.canvas.width / size.width, p.canvas.height / size.height);
+  // Вписываем целиком, потом применяем увеличение и сдвиг. Сдвиг ограничен
+  // так, чтобы картинку нельзя было утащить за край и потерять.
+  const fit = Math.min(p.canvas.width / size.width, p.canvas.height / size.height);
+  const scale = fit * panoView.zoom;
   const w = size.width * scale;
   const h = size.height * scale;
-  ctx.drawImage(renderer.canvas, (p.canvas.width - w) / 2, (p.canvas.height - h) / 2, w, h);
+  const limitX = Math.max(0, (w - p.canvas.width) / 2);
+  const limitY = Math.max(0, (h - p.canvas.height) / 2);
+  panoView.panX = Math.max(-limitX, Math.min(limitX, panoView.panX));
+  panoView.panY = Math.max(-limitY, Math.min(limitY, panoView.panY));
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(renderer.canvas,
+    (p.canvas.width - w) / 2 + panoView.panX,
+    (p.canvas.height - h) / 2 + panoView.panY, w, h);
 
   label(ctx, p.canvas.width - 14, 26,
     'слой ' + (slab < 10 ? slab.toFixed(1) : Math.round(slab)) + ' мм' +
-    (panoFocus ? '' : ' · держите, чтобы истончить'), 'right', 0.85);
+    (panoView.zoom > 1.05 ? ' · ×' + panoView.zoom.toFixed(1) : ''), 'right', 0.85);
 }
 
 function drawVolume3D(p, ctx) {
@@ -468,8 +481,8 @@ export function setFourth(mode) {
   if (!study) return;
   if (mode === 'panorama' && !study.arch) return;
   fourth = mode;
-  panoFocus = false;
   updateFourthButton();
+  updateTools();
   drawVolumePane();
 }
 
@@ -604,19 +617,35 @@ function applyMarks() {
 function updateTools() {
   for (const btn of document.querySelectorAll('.tool')) {
     const name = btn.dataset.tool;
-    const usable = !!study && (name !== 'slab');
+    const slab = name === 'slab';
+    const usable = !!study && (!slab || (fourth === 'panorama' && !!study.arch));
     btn.disabled = !usable;
-    btn.classList.toggle('is-active', usable && tool === name);
+    btn.classList.toggle('is-active', usable && !slab && tool === name);
+    if (slab) {
+      const span = btn.querySelector('span');
+      const mm = study?.arch?.slabMM;
+      if (span) span.textContent = usable && mm ? 'Слой ' + (mm < 10 ? mm.toFixed(1) : mm) : 'Слой';
+    }
   }
 }
 
 function useTool(name) {
   if (!study) return;
   if (name === 'reset') { resetView(); return; }
+  if (name === 'slab') { cycleSlab(); return; }
   tool = tool === name ? 'navigate' : name;
   pending = null;
   updateTools();
   drawAll();
+}
+
+/** Толщина слоя развёртки по кругу: 25 → 10 → 5 → 1.5 мм. */
+function cycleSlab() {
+  if (fourth !== 'panorama' || !study.arch) return;
+  const at = SLAB_STEPS.indexOf(study.arch.slabMM);
+  study.arch.slabMM = SLAB_STEPS[(at + 1) % SLAB_STEPS.length];
+  updateTools();
+  drawVolumePane();
 }
 
 function resetView() {
@@ -624,6 +653,8 @@ function resetView() {
   view.volume.yaw = 0;
   view.volume.pitch = 0;
   view.volume.zoom = 1;
+  panoView = { zoom: 1, panX: 0, panY: 0 };
+  if (study.arch) study.arch.slabMM = SLAB_STEPS[0];
   resetVolumeLook();
   crosshair = study.dims.map((n) => (n - 1) / 2);
   study.look = autoWindow(study.histogram, study.series);
@@ -650,8 +681,10 @@ export function clearMeasures() {
 
 // ─── Рука врача ────────────────────────────────────────────────────────────
 
-const SLAB_MM = 25;            // обычная толщина развёртки
-const FOCUS_MM = 1.5;          // по удержанию — тонкий срез по самой дуге
+// Толщина слоя развёртки. Толстый показывает весь зубной ряд разом, тонкий
+// режет ровно по дуге. Переключается кнопкой «Слой»: жест удержания путал —
+// врач принимал его за смену среза.
+const SLAB_STEPS = [25, 10, 5, 1.5];
 
 const MOVE_THRESHOLD = 6;      // меньше — это касание, а не движение
 
@@ -757,8 +790,12 @@ function bindVolumePointer() {
     canvas.setPointerCapture(e.pointerId);
     points.set(e.pointerId, pos(canvas, e));
     if (fourth === 'panorama') {
-      panoFocus = true;
-      drawVolumePane();
+      if (points.size === 1) {
+        drag = { start: pos(canvas, e), pan: { x: panoView.panX, y: panoView.panY } };
+      } else if (points.size === 2) {
+        const [a, b] = [...points.values()];
+        drag = { pinch: Math.hypot(a.x - b.x, a.y - b.y), zoom: panoView.zoom };
+      }
       return;
     }
     if (points.size === 1) {
@@ -772,9 +809,23 @@ function bindVolumePointer() {
   });
 
   canvas.addEventListener('pointermove', (e) => {
-    if (!study || !points.has(e.pointerId) || fourth === 'panorama') return;
+    if (!study || !points.has(e.pointerId)) return;
     points.set(e.pointerId, pos(canvas, e));
     if (!drag) return;
+
+    if (fourth === 'panorama') {
+      if (drag.pinch) {
+        const [a, b] = [...points.values()];
+        const now = Math.hypot(a.x - b.x, a.y - b.y);
+        if (drag.pinch > 4) panoView.zoom = Math.min(8, Math.max(1, drag.zoom * now / drag.pinch));
+      } else {
+        const here = pos(canvas, e);
+        panoView.panX = drag.pan.x + (here.x - drag.start.x);
+        panoView.panY = drag.pan.y + (here.y - drag.start.y);
+      }
+      drawVolumePane();
+      return;
+    }
 
     if (drag.pinch) {
       const [a, b] = [...points.values()];
@@ -795,7 +846,7 @@ function bindVolumePointer() {
     points.delete(e.pointerId);
     if (points.size > 0) return;
     drag = null;
-    if (panoFocus) { panoFocus = false; drawVolumePane(); return; }
+    if (fourth === 'panorama') return;
     if (view.volume?.moving) {
       view.volume.moving = false;
       drawVolumePane();   // отпустили — перерисовываем мелким шагом
@@ -847,6 +898,11 @@ export function viewerState() {
   return {
     arch: study.arch ? { lengthMM: study.arch.lengthMM, pixelMM: study.arch.pixelMM } : null,
     archReason,
+    shaders: {
+      срезы: !renderer?.broken,
+      развёртка: !!pano && !pano.broken,
+      объём: !!volume3d && !volume3d.broken,
+    },
     fourth,
     dims: study.dims,
     reduction: study.reduction,
@@ -902,7 +958,7 @@ export function measureAt(plane, points, kind = 'ruler') {
 
 // Опоры для автоматических проверок.
 //
-// Через import их не взять: у './viewer.js?v=0.5.0' и './viewer.js?v=0.5.0'
+// Через import их не взять: у './viewer.js?v=0.5.1' и './viewer.js?v=0.5.1'
 // разные экземпляры модуля, и проверка получила бы пустой просмотр вместо
 // открытого. Номер в адресе меняется каждый выпуск, поэтому проверки
 // цепляются сюда, а не за адрес. Внутренности приложения в браузере и так
