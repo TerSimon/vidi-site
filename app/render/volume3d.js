@@ -12,7 +12,7 @@
 //  пациента, даже если объём записан сагиттально.
 //
 
-import { VERT, buildProgram } from './mpr.js?v=0.6.0';
+import { VERT, buildProgram } from './mpr.js?v=0.7.0';
 
 const FRAG = `#version 300 es
 precision highp float;

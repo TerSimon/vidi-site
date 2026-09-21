@@ -10,15 +10,15 @@
 //  телефона и уменьшение объёма под память их не сдвигают.
 //
 
-import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.6.0';
-import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen, zoomAround }
-  from './planes.js?v=0.6.0';
-import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.6.0';
-import { buildVolume } from './archive.js?v=0.6.0';
-import { PanoRenderer } from './render/pano.js?v=0.6.0';
-import { VolumeRenderer, halfView } from './render/volume3d.js?v=0.6.0';
-import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.6.0';
-import { patientAxes } from './geometry.js?v=0.6.0';
+import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.7.0';
+import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen, zoomAround,
+  planeBasis, noRotation, rotateAround } from './planes.js?v=0.7.0';
+import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.7.0';
+import { buildVolume } from './archive.js?v=0.7.0';
+import { PanoRenderer } from './render/pano.js?v=0.7.0';
+import { VolumeRenderer, halfView } from './render/volume3d.js?v=0.7.0';
+import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.7.0';
+import { patientAxes } from './geometry.js?v=0.7.0';
 
 const $ = (id) => document.getElementById(id);
 
@@ -33,6 +33,11 @@ let study = null;              // { geometry, layouts, dims, look, reduction, no
 let crosshair = null;          // точка объёма, общая для всех панелей
 let view = null;               // plane → { zoom, panU, panV }
 let tool = 'navigate';
+// Разворот каркаса: все три панели поворачиваются вместе. Нужен, чтобы вести
+// срез вдоль оси зуба, а не вдоль осей аппарата — ради этого косой срез и
+// существует. До этого этапа его в браузере не было вовсе.
+let rotation = noRotation();
+let rotating = null;           // в какой панели сейчас держат ручку разворота
 let measures = [];             // { plane, kind, points: [[i,j,k], …] }
 let pending = null;            // незаконченное измерение
 
@@ -46,7 +51,10 @@ export function attachViewer() {
       el, canvas,
       ctx: canvas.getContext('2d'),
       empty: el.querySelector('.pane-empty'),
-      name: el.querySelector('.pane-name'),
+      chip: el.querySelector('.plane-chip'),
+      chipName: el.querySelector('.chip-name'),
+      chipValue: el.querySelector('.chip-value'),
+      chipUnit: el.querySelector('.unit'),
       markL: el.querySelector('.mark-l'),
       markR: el.querySelector('.mark-r'),
     });
@@ -209,6 +217,8 @@ export async function showVolume(file, series, { onProgress, signal } = {}) {
   pending = null;
   tool = 'navigate';
   study.arch = prepareArch();
+  rotation = noRotation();
+  rotating = null;
   panoView = { zoom: 1, panX: 0, panY: 0 };
   fourth = 'volume';
   updateFourthButton();
@@ -343,14 +353,16 @@ function autoWindow(histogram, series) {
 
 function mapFor(plane) {
   const p = panes.get(plane);
-  return screenMap(study.geometry, study.layouts[plane], study.dims,
+  const layout = study.layouts[plane];
+  return screenMap(study.geometry, layout, study.dims,
     p.canvas.width, p.canvas.height,
-    { ...view[plane], index: crosshair[study.layouts[plane].n] });
+    { ...view[plane], basis: planeBasis(layout, rotation), center: crosshair });
 }
 
 function drawAll() {
   for (const plane of PLANES) drawPane(plane);
   drawVolumePane();
+  updateChips();   // значение в чипе идёт за срезом
 }
 
 function drawPane(plane) {
@@ -513,8 +525,8 @@ function updateFourthButton() {
   btn.disabled = !canPano;
   btn.title = canPano ? '' : (archReason || 'развёртка недоступна');
   btn.textContent = fourth === 'panorama' ? '3D' : 'Панорама';
-  const name = panes.get('volume')?.name;
-  if (name) name.textContent = fourth === 'panorama' ? 'Панорама' : '3D';
+  const name = panes.get('volume')?.chipName;
+  if (name) name.textContent = fourth === 'panorama' ? 'Pano' : '3D';
   updateViewButtons();
 }
 
@@ -603,10 +615,21 @@ function drawGrid(ctx, canvas) {
   ctx.stroke();
 }
 
+// Ручка разворота: за неё каркас поворачивают вокруг нормали панели. Радиус в
+// точках устройства — палец на телефоне и курсор на Mac целятся одинаково.
+const HANDLE_R = 52;
+const HANDLE_HIT = 26;
+
+/** Где сейчас ручка разворота этой панели, в точках canvas. */
+function handleAt(plane, map) {
+  const [x, y] = voxelToScreen(map, study.layouts[plane], crosshair);
+  return { x: x + HANDLE_R, y, cx: x, cy: y };
+}
+
 function drawCrosshair(ctx, canvas, plane, map) {
   const layout = study.layouts[plane];
   const [x, y] = voxelToScreen(map, layout, crosshair);
-  ctx.strokeStyle = 'rgba(79,156,255,0.55)';
+  ctx.strokeStyle = 'rgba(76,142,255,0.55)';
   ctx.lineWidth = 1;
   const gap = 10;
   ctx.beginPath();
@@ -614,6 +637,26 @@ function drawCrosshair(ctx, canvas, plane, map) {
   ctx.moveTo(x, y + gap); ctx.lineTo(x, canvas.height);
   ctx.moveTo(0, y); ctx.lineTo(x - gap, y);
   ctx.moveTo(x + gap, y); ctx.lineTo(canvas.width, y);
+  ctx.stroke();
+
+  // Ручка. Без неё развернуть срез нечем: тянуть за сами линии нельзя, они
+  // уже заняты — за них листают срезы.
+  const live = rotating?.plane === plane ? rotating.angle : 0;
+  const hx = x + HANDLE_R * Math.cos(live);
+  const hy = y + HANDLE_R * Math.sin(live);
+  if (live) {
+    ctx.beginPath();
+    ctx.moveTo(x, y); ctx.lineTo(hx, hy);
+    ctx.strokeStyle = 'rgba(76,142,255,0.45)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.arc(hx, hy, 5, 0, Math.PI * 2);
+  ctx.fillStyle = live ? '#4C8EFF' : 'rgba(76,142,255,0.85)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 }
 
@@ -703,17 +746,48 @@ function applyMarks() {
     const p = panes.get(plane);
     const layout = study?.layouts[plane];
     if (!p) continue;
+    if (p.chipName && layout) p.chipName.textContent = layout.name;
     if (!layout || !layout.trusted) {
       p.markL.hidden = true;
       p.markR.hidden = true;
-      if (layout) p.name.textContent = layout.name + ' · стороны не определены';
       continue;
     }
     p.markL.hidden = false;
     p.markR.hidden = false;
     p.markL.textContent = layout.left;
     p.markR.textContent = layout.right;
-    p.name.textContent = layout.name;
+  }
+  updateChips();
+}
+
+/*
+  Значение в чипе — положение среза вдоль нормали, от середины объёма, в
+  миллиметрах. Это то же число, что врач видит на Mac рядом с названием
+  проекции, и по нему он понимает, где находится, не считая срезы.
+
+  Без размера точки числа нет вовсе: подписать миллиметрами то, что в них не
+  измеряется, — хуже, чем не подписать.
+*/
+function updateChips() {
+  if (!study) return;
+  const mm = study.geometry.mm;
+  const size = [study.geometry.voxel.i, study.geometry.voxel.j, study.geometry.voxel.k];
+  for (const plane of PLANES) {
+    const p = panes.get(plane);
+    const layout = study.layouts[plane];
+    if (!p?.chipValue || !layout) continue;
+    if (!mm) {
+      p.chipValue.textContent = 'без масштаба';
+      p.chipUnit.textContent = '';
+      continue;
+    }
+    const N = planeBasis(layout, rotation).N;
+    let off = 0;
+    for (let a = 0; a < 3; a++) off += (crosshair[a] - (study.dims[a] - 1) / 2) * size[a] * N[a];
+    // Минус — настоящий, а не дефис: он стоит рядом с числом и должен быть
+    // одной ширины со знаком плюс в моноширинном наборе.
+    p.chipValue.textContent = (off < 0 ? '−' : '') + Math.abs(off).toFixed(1);
+    p.chipUnit.textContent = 'мм';
   }
 }
 
@@ -801,6 +875,9 @@ function resetView() {
   view.volume.zoom = 1;
   view.volume.panX = 0;
   view.volume.panY = 0;
+  // Сброс вида возвращает и разворот: иначе «сброс» оставляет срез косым.
+  rotation = noRotation();
+  rotating = null;
   panoView = { zoom: 1, panX: 0, panY: 0 };
   if (study.arch) study.arch.slabMM = SLAB_STEPS[0];
   resetVolumeLook();
@@ -852,8 +929,17 @@ function bindPointer(plane) {
     capture(canvas, e);
     points.set(e.pointerId, pos(canvas, e));
     if (points.size === 1) {
-      drag = { start: pos(canvas, e), moved: false, index: crosshair[study.layouts[plane].n],
-        look: { ...study.look }, pan: { ...view[plane] } };
+      const at = pos(canvas, e);
+      const h = handleAt(plane, mapFor(plane));
+      if (Math.hypot(at.x - h.x, at.y - h.y) <= HANDLE_HIT) {
+        // Взялись за ручку — дальше это разворот, а не листание.
+        const from = Math.atan2(at.y - h.cy, at.x - h.cx);
+        rotating = { plane, angle: from };
+        drag = { rotate: true, from, rot: rotation, moved: true };
+      } else {
+        drag = { start: at, moved: false, center: crosshair.slice(),
+          look: { ...study.look }, pan: { ...view[plane] } };
+      }
     } else if (points.size === 2) {
       const [a, b] = [...points.values()];
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
@@ -897,6 +983,20 @@ function bindPointer(plane) {
     }
     if (!drag || drag.pinch) return;
 
+    if (drag.rotate) {
+      const at = pos(canvas, e);
+      const h = handleAt(plane, mapFor(plane));
+      const now = Math.atan2(at.y - h.cy, at.x - h.cx);
+      rotating = { plane, angle: now };
+      // Знак: экранный угол растёт по часовой (ось Y вниз), а поворот каркаса
+      // на +α уводит точки изображения против часовой. Минус возвращает
+      // картинку под палец — то же правило, что у увеличения к пальцам.
+      rotation = rotateAround(drag.rot, planeBasis(study.layouts[plane], drag.rot).N,
+        -(now - drag.from));
+      drawAll();
+      return;
+    }
+
     const here = pos(canvas, e);
     const dx = here.x - drag.start.x;
     const dy = here.y - drag.start.y;
@@ -917,13 +1017,16 @@ function bindPointer(plane) {
     // выбрана линейка, ломает работу — на Mac это уже проходили.
     // Полное движение по панели сверху вниз — весь объём.
     const layout = study.layouts[plane];
-    const perPixel = study.dims[layout.n] / Math.max(1, canvas.height * 0.9);
-    setIndex(layout.n, drag.index + dy * perPixel);
+    const size = [study.geometry.voxel.i, study.geometry.voxel.j, study.geometry.voxel.k];
+    const spanMM = study.dims[layout.n] * size[layout.n];
+    const perPixel = spanMM / Math.max(1, canvas.height * 0.9);
+    moveAlong(drag.center, planeBasis(layout, rotation).N, dy * perPixel);
     drawAll();
   });
 
   const end = (e) => {
     points.delete(e.pointerId);
+    if (points.size === 0) { rotating = null; drawPane(plane); }
     if (!study) { drag = null; return; }
     const wasDrag = drag;
     if (points.size === 0) drag = null;
@@ -1107,6 +1210,21 @@ function setIndex(axis, value) {
   crosshair[axis] = Math.min(study.dims[axis] - 1, Math.max(0, value));
 }
 
+/**
+ * Сдвинуть перекрестие на столько миллиметров вдоль вектора.
+ *
+ * У прямого среза это то же самое, что сменить номер среза. У косого номера
+ * среза нет вовсе: плоскость идёт поперёк всех трёх осей сразу, и листать
+ * можно только вдоль её собственной нормали.
+ */
+function moveAlong(from, vec, mm) {
+  const size = [study.geometry.voxel.i, study.geometry.voxel.j, study.geometry.voxel.k];
+  for (let a = 0; a < 3; a++) {
+    const next = from[a] + mm * vec[a] / size[a];
+    crosshair[a] = Math.min(study.dims[a] - 1, Math.max(0, next));
+  }
+}
+
 function tap(plane, at) {
   const map = mapFor(plane);
   const voxel = screenToVoxel(map, at.x, at.y);
@@ -1155,6 +1273,7 @@ export function viewerState() {
     measures: measures.map((m) => ({ kind: m.kind, plane: m.plane, text: measureText(m) })),
     zoom: view?.axial?.zoom ?? 1,
     window: { center: study.look.center, width: study.look.width },
+    rotation: rotation.map((r) => r.slice()),
     volume: view?.volume
       ? { yaw: view.volume.yaw, pitch: view.volume.pitch, zoom: view.volume.zoom }
       : null,
@@ -1214,12 +1333,26 @@ export function measureAt(plane, points, kind = 'ruler') {
 
 // Опоры для автоматических проверок.
 //
-// Через import их не взять: у './viewer.js?v=0.6.0' и './viewer.js?v=0.6.0'
+// Через import их не взять: у './viewer.js?v=0.7.0' и './viewer.js?v=0.7.0'
 // разные экземпляры модуля, и проверка получила бы пустой просмотр вместо
 // открытого. Номер в адресе меняется каждый выпуск, поэтому проверки
 // цепляются сюда, а не за адрес. Внутренности приложения в браузере и так
 // открыты — тайны тут нет.
 globalThis.__vidiViewer = {
   state: viewerState, paneMap, toScreen, fromScreen, measureAt, setZoom, selectPlane,
-  clearMeasures, setFourth, timeFourth,
+  clearMeasures, setFourth, timeFourth, handleAt: testHandle, spinBy,
 };
+
+/** Для проверок: где ручка разворота панели. */
+function testHandle(plane) {
+  if (!study) return null;
+  return handleAt(plane, mapFor(plane));
+}
+
+/** Для проверок: довернуть каркас вокруг нормали панели на угол. */
+function spinBy(plane, angle) {
+  if (!study) return null;
+  rotation = rotateAround(rotation, planeBasis(study.layouts[plane], rotation).N, angle);
+  drawAll();
+  return rotation.map((r) => r.slice());
+}

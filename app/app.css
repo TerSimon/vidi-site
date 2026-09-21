@@ -12,36 +12,73 @@
 :root {
   color-scheme: dark;
 
-  --bg0: #0B0E14;
-  --bg1: #0E1117;
-  --ink: #F2F4F8;
-  --ink2: #A6B0BE;
-  --ink3: #7D8794;
-  --accent: #4F9CFF;
-  --on-accent: #06101E;
+  /* Значения сняты с дизайн-системы Vidi (vidi-tokens.css), не подобраны на
+     глаз. Раньше здесь стояли соседние оттенки — синий 4F9CFF вместо 4C8EFF,
+     бледные цвета плоскостей, — и браузерная версия выглядела похожей на
+     приложение, но не той же. */
+  --ground: #0A0D14;         /* фон окна */
+  --void: #000000;           /* под снимком — истинный чёрный, обязателен */
+  --surface: #12161F;        /* панели в покое */
+  --surface-2: #1B212C;      /* карточки, поля ввода */
+  --surface-3: #232A37;      /* ghost-кнопки, чипы */
+  --line: rgba(255, 255, 255, .08);
+  --line-strong: rgba(255, 255, 255, .14);
 
-  --axial: #8CBFFF;
-  --sagittal: #FF8C8C;
-  --coronal: #99F299;
+  /* Рецепт стекла один на всё плавающее. Настраивать по месту нельзя: как
+     только у одного контейнера свои блюр и прозрачность, хром выглядит
+     собранным из разных приложений. */
+  --glass-bg: rgba(13, 16, 23, .66);
+  --glass-line: rgba(255, 255, 255, .12);
+  --glass-shadow: 0 12px 40px rgba(0, 0, 0, .45);
+  --glass-blur: blur(26px) saturate(150%);
 
-  --danger: #DC3232;
-  --safe: #99F299;
-  --amber: #FFC400;
+  --ink: #F4F6FA;
+  --ink-dim: #93A0B4;
+  --ink-faint: #7A8698;
 
-  --glass: rgba(13, 16, 23, .66);
-  --panel: rgba(15, 18, 26, .88);
-  --surface: rgba(255, 255, 255, .05);
-  --surface2: rgba(255, 255, 255, .09);
-  --hair: rgba(255, 255, 255, .12);
-  --hair-soft: rgba(255, 255, 255, .07);
+  /* Акцент один. */
+  --signal: #4C8EFF;
+  --signal-ink: #DCE8FF;
+  --signal-tint: rgba(76, 142, 255, .14);
+
+  /* Цвета плоскостей — адресация, не палитра: ими красится только то, что
+     относится к проекции. */
+  --plane-axial: #4C8EFF;
+  --plane-sagittal: #FF6B6B;
+  --plane-coronal: #4ED17E;
+  --plane-neutral: #B9C2D0;
+
+  --amber: #F2C14E;          /* измерение, зарезервирован */
+  --status-good: #4ED17E;
+  --status-warn: #F2C14E;
+  --status-danger: #FF5C5C;
+
+  --tint-hover: rgba(255, 255, 255, .06);
+  --tint-active: rgba(255, 255, 255, .10);
+
+  --font-display: 'Golos Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 
-  --radius: 14px;
+  --radius-sm: 9px;          /* чип */
+  --radius-glass-sm: 11px;   /* мелкое плавающее */
+  --radius: 14px;            /* панель */
+  --radius-lg: 20px;         /* карточка */
   --tap: 44px; /* минимальная площадь нажатия — палец, не курсор */
+}
+
+/* Одно стекло на всё плавающее. */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-line);
+  box-shadow: var(--glass-shadow);
 }
 
 * { box-sizing: border-box; }
@@ -55,9 +92,9 @@ html, body {
 }
 
 body {
-  background: var(--bg0);
+  background: var(--ground);
   color: var(--ink);
-  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font: 400 16px/1.5 var(--font-body);
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
@@ -92,21 +129,22 @@ body {
 .start-head { display: grid; gap: 6px; }
 
 .wordmark {
+  font-family: var(--font-display);
   font-size: 34px;
-  font-weight: 650;
+  font-weight: 800;
   letter-spacing: -.02em;
 }
 
-.lead { margin: 0; color: var(--ink2); }
+.lead { margin: 0; color: var(--ink-dim); }
 
 /* Имя пациента стоит на месте заголовка, но длинное русское имя в размере
    логотипа занимает две строки и съедает экран телефона. */
 .wordmark.is-name { font-size: 26px; line-height: 1.2; }
 
 .card {
-  background: var(--panel);
-  border: 1px solid var(--hair-soft);
-  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
   padding: 16px;
   display: grid;
   gap: 12px;
@@ -125,9 +163,9 @@ body {
   box-shadow: 0 -12px 24px -12px rgba(0, 0, 0, 0.7);
 }
 
-.card-title { font-weight: 600; }
+.card-title { font-weight: 700; }
 
-.hint { margin: 0; color: var(--ink3); font-size: 14px; }
+.hint { margin: 0; color: var(--ink-faint); font-size: 14px; }
 
 .rows {
   display: grid;
@@ -136,39 +174,39 @@ body {
   margin: 0;
   font-size: 14px;
 }
-.rows dt { color: var(--ink2); }
+.rows dt { color: var(--ink-dim); }
 .rows dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-.rows dd.ok { color: var(--safe); }
-.rows dd.bad { color: var(--danger); }
+.rows dd.ok { color: var(--status-good); }
+.rows dd.bad { color: var(--status-danger); }
 
 .btn {
   appearance: none;
   min-height: var(--tap);
   padding: 12px 18px;
-  border: 1px solid var(--hair);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--tint-hover);
   color: var(--ink);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
   transition: background .12s ease, transform .12s ease, opacity .12s ease;
 }
-.btn:hover { background: var(--surface2); }
+.btn:hover { background: var(--tint-active); }
 .btn:active { transform: scale(.98); }
 .btn:disabled { opacity: .45; cursor: default; transform: none; }
 
 .btn-primary {
-  background: var(--accent);
+  background: var(--signal);
   border-color: transparent;
-  color: var(--on-accent);
+  color: #fff;
 }
 .btn-primary:hover { background: #63a8ff; }
 
 .start-foot {
   margin-top: auto;
   padding-top: 8px;
-  color: var(--ink3);
+  color: var(--ink-faint);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
@@ -184,10 +222,10 @@ body {
     calc(12px + var(--safe-right))
     8px
     calc(12px + var(--safe-left));
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--hair-soft);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--line);
 }
 
 .icon-btn {
@@ -203,7 +241,7 @@ body {
   color: var(--ink);
   cursor: pointer;
 }
-.icon-btn:hover { background: var(--surface); }
+.icon-btn:hover { background: var(--tint-hover); }
 .icon-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 .patient {
@@ -215,14 +253,14 @@ body {
   font-weight: 600;
 }
 
-.topbar-right { flex: none; color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.topbar-right { flex: none; color: var(--ink-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
 
 .planes {
   display: none; /* на широком экране видны все четыре панели сразу */
   gap: 4px;
   padding: 8px calc(12px + var(--safe-right)) 8px calc(12px + var(--safe-left));
-  background: var(--glass);
-  border-bottom: 1px solid var(--hair-soft);
+  background: var(--glass-bg);
+  border-bottom: 1px solid var(--line);
 }
 
 .plane-tab {
@@ -232,13 +270,13 @@ body {
   border: 0;
   border-radius: 9px;
   background: transparent;
-  color: var(--ink2);
+  color: var(--ink-dim);
   font: inherit;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
 }
-.plane-tab.is-active { background: var(--surface2); color: var(--ink); }
+.plane-tab.is-active { background: var(--tint-active); color: var(--ink); }
 
 .grid {
   flex: 1;
@@ -247,31 +285,57 @@ body {
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
   gap: 1px;
-  background: var(--hair);
+  background: var(--line-strong);
 }
 
 .pane {
   position: relative;
   overflow: hidden;
-  background: #000;
+  background: var(--void);
   touch-action: none; /* жесты обрабатываем сами, иначе Safari тянет страницу */
 }
 
 .pane-canvas { display: block; width: 100%; height: 100%; }
 
-.pane-name {
+/*
+  Чип плоскости из дизайн-системы: точка цветом проекции, название латиницей,
+  положение среза в миллиметрах. Латиница не прихоть — Axial/Sagittal/Coronal
+  это адресация, одинаковая во всех вьюверах и в подписях к снимкам.
+
+  Стекло, а не тень под текстом: подпись плавает над снимком, а всё плавающее
+  в Vidi стеклянное — одним рецептом.
+*/
+.plane-chip {
   position: absolute;
   top: 8px;
-  left: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: .02em;
-  color: var(--plane, var(--ink2));
-  /* Подпись стоит поверх снимка: на кости она белая по белому. Тень читается
-     на любой яркости и не занимает места, в отличие от подложки. */
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .9);
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
   pointer-events: none;
+  white-space: nowrap;
 }
+.plane-chip .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--plane, var(--plane-neutral));
+}
+.plane-chip b { color: var(--ink); font-weight: 500; }
+/* Единица тише числа. */
+.plane-chip .unit { color: var(--ink-faint); margin-left: 3px; }
 
 /* Метки сторон пациента. Врач по ним понимает, где правая сторона. */
 .mark {
@@ -280,7 +344,7 @@ body {
   transform: translateY(-50%);
   font-size: 13px;
   font-weight: 700;
-  color: var(--ink2);
+  color: var(--ink-dim);
   pointer-events: none;
 }
 .mark-l { left: 8px; }
@@ -294,7 +358,7 @@ body {
   display: grid;
   place-items: center;
   padding-top: 22%;
-  color: var(--ink3);
+  color: var(--ink-faint);
   font-size: 13px;
   pointer-events: none;
 }
@@ -305,11 +369,11 @@ body {
   bottom: 8px;
   min-height: 32px;
   padding: 6px 12px;
-  border: 1px solid var(--hair);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   color: var(--ink);
   font: inherit;
   font-size: 13px;
@@ -327,11 +391,11 @@ body {
   display: flex;
   gap: 4px;
   padding: 3px;
-  border: 1px solid var(--hair);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .view-btn {
@@ -341,24 +405,24 @@ body {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--ink2);
+  color: var(--ink-dim);
   font: inherit;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }
-.view-btn:hover { color: var(--ink); background: var(--surface); }
-.view-btn.is-active { color: var(--ink); background: var(--surface2); }
+.view-btn:hover { color: var(--ink); background: var(--tint-hover); }
+.view-btn.is-active { color: var(--ink); background: var(--tint-active); }
 
 .toolbar {
   display: flex;
   justify-content: center;
   gap: 4px;
   padding: 6px calc(8px + var(--safe-right)) calc(6px + var(--safe-bottom)) calc(8px + var(--safe-left));
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid var(--hair-soft);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-top: 1px solid var(--line);
 }
 
 .tool {
@@ -378,54 +442,41 @@ body {
   font-size: 11px;
   cursor: pointer;
 }
-.tool:hover { background: var(--surface); }
-.tool.is-active { background: var(--surface2); color: var(--accent); }
+.tool:hover { background: var(--tint-hover); }
+.tool.is-active { background: var(--tint-active); color: var(--signal); }
 .tool:disabled { opacity: .38; cursor: default; background: transparent; }
 
 /* Удаление разметки. Красным — только когда взведено вторым нажатием:
    постоянный красный в ряду читается как тревога, а не как кнопка. */
-.tool-danger.is-armed { color: var(--danger); background: color-mix(in srgb, var(--danger) 16%, transparent); }
+.tool-danger.is-armed { color: var(--status-danger); background: color-mix(in srgb, var(--status-danger) 16%, transparent); }
 .tool svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
-/* Плашка поверх снимка: «Разрешение 0,4 мм», предупреждения. */
 /*
-  Метка оговорки: объём ужат или геометрии нет. Подпись целиком закрывает
-  снимок, поэтому она гаснет, а метка остаётся — по касанию показывает текст
-  снова. Молчать про ужатый объём нельзя, закрывать им анатомию — тоже.
+  Метка оговорки в верхней панели: бейдж дизайн-системы — моноширинный, pill,
+  заливка 14% от своего цвета. Нейтральная, пока говорить не о чем; жёлтая,
+  когда объём ужат или геометрии нет. Снимка она не касается: подпись поверх
+  анатомии закрывала на телефоне половину экрана.
 */
-.plate-badge {
-  position: absolute;
-  right: calc(10px + var(--safe-right));
-  bottom: calc(var(--tap) + 24px + var(--safe-bottom));
+.chip-btn {
   appearance: none;
-  min-height: 32px;
-  padding: 6px 12px;
-  border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
+  flex: none;
+  max-width: 42vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border: 0;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--amber) 14%, var(--panel));
-  color: var(--amber);
-  font: inherit;
-  font-size: 13px;
+  background: var(--tint-hover);
+  color: var(--ink-dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
-
-.plate {
-  position: absolute;
-  left: 50%;
-  bottom: calc(var(--tap) + 24px + var(--safe-bottom));
-  transform: translateX(-50%);
-  max-width: min(92vw, 420px);
-  padding: 10px 14px;
-  border: 1px solid var(--hair);
-  border-radius: 12px;
-  background: var(--panel);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  color: var(--ink2);
-  font-size: 13px;
-  text-align: center;
-  pointer-events: none;
-}
+.chip-btn:hover { background: var(--tint-active); color: var(--ink); }
+.chip-btn.is-warn { background: rgba(242, 193, 78, .14); color: #F6D686; }
 
 /* ─── Формы ─────────────────────────────────────────────────────────────── */
 
@@ -439,13 +490,13 @@ body {
 }
 
 .field { display: grid; gap: 6px; }
-.field-name { color: var(--ink2); font-size: 14px; }
+.field-name { color: var(--ink-dim); font-size: 14px; }
 
 .field input {
   appearance: none;
   min-height: var(--tap);
   padding: 11px 14px;
-  border: 1px solid var(--hair);
+  border: 1px solid var(--line-strong);
   border-radius: 11px;
   background: rgba(0, 0, 0, .25);
   color: var(--ink);
@@ -456,9 +507,9 @@ body {
 }
 .field input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--signal);
 }
-.field input::placeholder { color: var(--ink3); }
+.field input::placeholder { color: var(--ink-faint); }
 
 /* Разрядка и заглавные — только для набранного кода: подсказка «8 символов»
    от них превращалась в «8 СИМВОЛОВ» и читалась как часть кода. */
@@ -470,7 +521,7 @@ body {
   grid-template-columns: auto 1fr;
   gap: 10px;
   align-items: start;
-  color: var(--ink2);
+  color: var(--ink-dim);
   font-size: 14px;
   cursor: pointer;
 }
@@ -478,15 +529,15 @@ body {
   width: 20px;
   height: 20px;
   margin: 1px 0 0;
-  accent-color: var(--accent);
+  accent-color: var(--signal);
 }
-.agree a { color: var(--accent); }
+.agree a { color: var(--signal); }
 
 .notice {
   margin: 0;
   padding: 10px 12px;
   border-radius: 10px;
-  background: var(--surface);
+  background: var(--tint-hover);
   color: var(--ink);
   font-size: 14px;
 }
@@ -498,7 +549,7 @@ body {
 .bar {
   height: 6px;
   border-radius: 999px;
-  background: var(--surface2);
+  background: var(--tint-active);
   overflow: hidden;
 }
 
@@ -506,7 +557,7 @@ body {
   height: 100%;
   width: 0;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--signal);
   transition: width .25s linear;
 }
 
@@ -533,7 +584,7 @@ body {
   width: 100%;
   min-height: var(--tap);
   padding: 12px 14px;
-  border: 1px solid var(--hair);
+  border: 1px solid var(--line-strong);
   border-radius: 12px;
   background: transparent;
   color: var(--ink);
@@ -541,14 +592,14 @@ body {
   text-align: left;
   cursor: pointer;
 }
-.series-item:hover { background: var(--surface); }
+.series-item:hover { background: var(--tint-hover); }
 .series-item.is-chosen {
-  border-color: var(--accent);
+  border-color: var(--signal);
   background: rgba(79, 156, 255, .14);
 }
 
 .series-name { font-weight: 600; }
-.series-meta { color: var(--ink2); font-size: 13px; font-variant-numeric: tabular-nums; }
+.series-meta { color: var(--ink-dim); font-size: 13px; font-variant-numeric: tabular-nums; }
 .series-warn { color: var(--amber); font-size: 13px; }
 
 /* ─── Поверх всего: место занято, ошибка ────────────────────────────────── */
@@ -571,9 +622,9 @@ body {
   display: grid;
   gap: 12px;
   padding: 18px;
-  border: 1px solid var(--hair);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
-  background: var(--panel);
+  background: var(--surface-2);
 }
 
 code {

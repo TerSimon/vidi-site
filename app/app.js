@@ -11,12 +11,12 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, describeHolder, SEAT_PING_MS,
-} from './auth.js?v=0.6.0';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=0.6.0';
+} from './auth.js?v=0.7.0';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=0.7.0';
 import { attachViewer, showVolume, clearVolume, selectPlane, layoutViewer }
-  from './viewer.js?v=0.6.0';
+  from './viewer.js?v=0.7.0';
 
-const VERSION = '0.6.0';
+const VERSION = '0.7.0';
 const STAGE = 'панорама';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
@@ -666,19 +666,25 @@ function isReduced(built) {
   return built.reduction.xy > 1 || built.reduction.z > 1;
 }
 
-/** Что написано под панелями: чем именно врач сейчас смотрит. */
-// Метка — свёрнутая подпись, поэтому они не показываются вместе.
-function foldPlate(folded) {
-  $('plate').hidden = folded;
-  $('plate-badge').hidden = !folded || !plateNote;
-}
-let plateNote = false;
+/*
+  Оговорка живёт меткой в верхней панели, а не подписью поверх снимка.
 
-$('plate').addEventListener('click', () => foldPlate(true));
-$('plate-badge').addEventListener('click', () => foldPlate(false));
+  Подпись стояла посреди изображения и на телефоне закрывала половину экрана,
+  а после неё на снимке оставалась жёлтая метка — и мешала уже она. Теперь
+  метка стоит в строке с именем пациента, снимка не касается вовсе, а полный
+  текст открывается окном по нажатию и закрывается кнопкой.
+*/
+function showNotes(show) {
+  $('notes-sheet').hidden = !show;
+}
+
+$('plate-badge').addEventListener('click', () => showNotes(true));
+$('notes-close').addEventListener('click', () => showNotes(false));
+$('notes-sheet').addEventListener('click', (e) => {
+  if (e.target === $('notes-sheet')) showNotes(false);   // мимо карточки — закрыть
+});
 
 function showPlate(series, built) {
-  const plate = $('plate');
   const size = built.geometry.mm
     ? ', точка ' + built.geometry.voxel.i.toFixed(2) + '×' +
       built.geometry.voxel.j.toFixed(2) + '×' + built.geometry.voxel.k.toFixed(2) + ' мм'
@@ -686,19 +692,18 @@ function showPlate(series, built) {
   const head = seriesTitle(series) + ': ' + built.dims[2] + ' ' +
     plural(built.dims[2], 'срез', 'среза', 'срезов') + ', ' +
     built.dims[0] + '×' + built.dims[1] + size + '.';
-  plate.textContent = [head, ...built.notes].join(' ');
+  $('notes-text').textContent = [head, ...built.notes].join(' ');
 
-  // Подпись гаснет всегда: она закрывает середину снимка, а на телефоне это
-  // половина изображения. Оговорка при этом не исчезает — остаётся метка,
-  // по касанию которой текст возвращается.
-  plateNote = built.notes.length > 0;
-  $('plate-badge').textContent = built.geometry.mm
+  const badge = $('plate-badge');
+  badge.textContent = built.geometry.mm
     ? (isReduced(built) ? 'ужат · ' + built.geometry.voxel.i.toFixed(2) + ' мм'
       : 'точка ' + built.geometry.voxel.i.toFixed(2) + ' мм')
     : 'без масштаба';
-  foldPlate(false);
-  clearTimeout(showPlate.timer);
-  showPlate.timer = setTimeout(() => foldPlate(true), plateNote ? 12000 : 6000);
+  // Жёлтым — только когда есть о чём предупредить. Постоянный жёлтый в строке
+  // перестаёт читаться как предупреждение.
+  badge.classList.toggle('is-warn', built.notes.length > 0);
+  badge.hidden = false;
+  showNotes(false);
 }
 
 $('open-cancel').addEventListener('click', () => {
@@ -708,9 +713,8 @@ $('open-cancel').addEventListener('click', () => {
 
 $('btn-back').addEventListener('click', () => {
   clearVolume();
-  clearTimeout(showPlate.timer);
-  plateNote = false;
-  foldPlate(true);
+  showNotes(false);
+  $('plate-badge').hidden = true;
   showScreen(foundStudy ? 'study' : 'start');
 });
 

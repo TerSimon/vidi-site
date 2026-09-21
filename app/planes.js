@@ -12,7 +12,7 @@
 //  сторону наугад — значит однажды оперировать не ту.
 //
 
-import { patientAxes } from './geometry.js?v=0.6.0';
+import { patientAxes } from './geometry.js?v=0.7.0';
 
 export const PLANES = ['axial', 'sagittal', 'coronal'];
 
@@ -34,7 +34,9 @@ const RAW = {
   coronal: { u: 0, v: 2, n: 1 },
 };
 
-const NAMES = { axial: 'Аксиальная', sagittal: 'Сагиттальная', coronal: 'Корональная' };
+// Латиница: Axial/Sagittal/Coronal — это адресация проекции, одинаковая во
+// всех вьюверах и в подписях к снимкам, а не перевод.
+const NAMES = { axial: 'Axial', sagittal: 'Sagittal', coronal: 'Coronal' };
 
 /**
  * Раскладка одной панели: какая ось объёма идёт вправо, какая вниз, какая
@@ -96,6 +98,23 @@ export function screenMap(g, layout, dims, widthPx, heightPx, state) {
   const fit = Math.max(mmU / Math.max(1, widthPx), mmV / Math.max(1, heightPx));
   const mmPerPixel = fit / zoom;
 
+  // Косой срез: панель развёрнута в пространстве, и её направления больше не
+  // совпадают с осями массива. Шейдер это умеет с самого начала — он берёт
+  // origin и два произвольных шага, — поэтому разворот целиком считается тут.
+  if (state?.basis && state?.center) {
+    const { U, V } = state.basis;
+    const c = state.center;
+    // Из миллиметров в точки: вдоль каждой оси свой размер точки.
+    const stepX = [0, 1, 2].map((a) => mmPerPixel * U[a] / size[a]);
+    const stepY = [0, 1, 2].map((a) => mmPerPixel * V[a] / size[a]);
+    const panU = state.panU ?? 0;
+    const panV = state.panV ?? 0;
+    const center = [0, 1, 2].map((a) => c[a] + (panU * U[a] + panV * V[a]) / size[a]);
+    const origin = [0, 1, 2].map((a) =>
+      center[a] - stepX[a] * (widthPx - 1) / 2 - stepY[a] * (heightPx - 1) / 2);
+    return { origin, stepX, stepY, mmPerPixel, mmU, mmV, size, U, V };
+  }
+
   const sx = mmPerPixel / size[layout.u.axis] * (layout.u.flip ? -1 : 1);
   const sy = mmPerPixel / size[layout.v.axis] * (layout.v.flip ? -1 : 1);
 
@@ -113,7 +132,65 @@ export function screenMap(g, layout, dims, widthPx, heightPx, state) {
   stepX[layout.u.axis] = sx;
   stepY[layout.v.axis] = sy;
 
-  return { origin, stepX, stepY, mmPerPixel, mmU, mmV };
+  const U = [0, 0, 0]; U[layout.u.axis] = layout.u.flip ? -1 : 1;
+  const V = [0, 0, 0]; V[layout.v.axis] = layout.v.flip ? -1 : 1;
+  return { origin, stepX, stepY, mmPerPixel, mmU, mmV, size, U, V };
+}
+
+/**
+ * Направления панели в пространстве объёма после разворота.
+ *
+ * Разворот жёсткий: все три панели поворачиваются вместе, как один каркас.
+ * Поэтому перекрестие в панели остаётся прямым — поворачивается изображение
+ * под ним, а не линии поверх него. Так же устроено на Mac.
+ */
+export function planeBasis(layout, rot) {
+  const axis = (a, flip) => { const v = [0, 0, 0]; v[a] = flip ? -1 : 1; return v; };
+  const U0 = axis(layout.u.axis, layout.u.flip);
+  const V0 = axis(layout.v.axis, layout.v.flip);
+  if (!rot) return { U: U0, V: V0, N: cross(U0, V0) };
+  const U = apply(rot, U0);
+  const V = apply(rot, V0);
+  return { U, V, N: cross(U, V) };
+}
+
+function apply(m, v) {
+  return [0, 1, 2].map((r) => m[r][0] * v[0] + m[r][1] * v[1] + m[r][2] * v[2]);
+}
+
+function cross(a, b) {
+  return [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0],
+  ];
+}
+
+/** Единичная матрица разворота. */
+export function noRotation() {
+  return [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+}
+
+/**
+ * Довернуть каркас на угол вокруг оси (в пространстве миллиметров объёма).
+ *
+ * Родригес: ось единичная, угол в радианах. Новый разворот применяется ПОВЕРХ
+ * прежнего — врач крутит от того, что видит сейчас, а не от исходного.
+ */
+export function rotateAround(rot, axisVec, angle) {
+  const len = Math.hypot(axisVec[0], axisVec[1], axisVec[2]);
+  if (!(len > 1e-9) || !Number.isFinite(angle)) return rot;
+  const [x, y, z] = axisVec.map((c) => c / len);
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const t = 1 - c;
+  const R = [
+    [t * x * x + c, t * x * y - s * z, t * x * z + s * y],
+    [t * x * y + s * z, t * y * y + c, t * y * z - s * x],
+    [t * x * z - s * y, t * y * z + s * x, t * z * z + c],
+  ];
+  return [0, 1, 2].map((r) => [0, 1, 2].map((col) =>
+    R[r][0] * rot[0][col] + R[r][1] * rot[1][col] + R[r][2] * rot[2][col]));
 }
 
 /**
@@ -143,12 +220,22 @@ export function screenToVoxel(map, px, py) {
   return [0, 1, 2].map((c) => map.origin[c] + map.stepX[c] * px + map.stepY[c] * py);
 }
 
-/** Точка объёма → экранная. Обратно к screenToVoxel. */
+/**
+ * Точка объёма → экранная. Обратно к screenToVoxel.
+ *
+ * Считается проекцией на направления панели в миллиметрах: у косого среза ни
+ * одна ось массива не совпадает с экраном, и делить на один компонент шага
+ * больше нельзя. Для прямого среза формула даёт ровно прежний результат —
+ * у него U и V единичные по своей оси, остальные нули.
+ */
 export function voxelToScreen(map, layout, voxel) {
-  const u = layout.u.axis;
-  const v = layout.v.axis;
-  return [
-    (voxel[u] - map.origin[u]) / map.stepX[u],
-    (voxel[v] - map.origin[v]) / map.stepY[v],
-  ];
+  const { origin, size, U, V, mmPerPixel } = map;
+  let x = 0;
+  let y = 0;
+  for (let a = 0; a < 3; a++) {
+    const mm = (voxel[a] - origin[a]) * size[a];
+    x += mm * U[a];
+    y += mm * V[a];
+  }
+  return [x / mmPerPixel, y / mmPerPixel];
 }

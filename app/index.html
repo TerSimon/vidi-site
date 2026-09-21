@@ -11,7 +11,13 @@
 <meta name="theme-color" content="#0B0E14">
 <title>Vidi</title>
 <link rel="icon" href="/favicon.ico">
-<link rel="stylesheet" href="app.css?v=0.6.0">
+<!-- Шрифты дизайн-системы. Грузятся не блокируя: если сеть подведёт, останется
+     системный шрифт, и врач всё равно увидит снимок. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" media="print" onload="this.media='all'"
+      href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="app.css?v=0.7.0">
 </head>
 <body>
 
@@ -164,43 +170,60 @@
     </button>
     <div class="patient" id="patient">Исследование не открыто</div>
     <div class="topbar-right">
+      <button class="chip-btn" id="plate-badge" type="button" hidden></button>
       <span class="version" id="version-viewer"></span>
     </div>
   </header>
 
   <!-- Переключатель панелей: виден только на узком экране. -->
   <nav class="planes" id="planes" role="tablist" aria-label="Проекции">
-    <button class="plane-tab is-active" role="tab" type="button" data-plane="axial" aria-selected="true">Акс</button>
-    <button class="plane-tab" role="tab" type="button" data-plane="sagittal" aria-selected="false">Саг</button>
-    <button class="plane-tab" role="tab" type="button" data-plane="coronal" aria-selected="false">Кор</button>
+    <button class="plane-tab is-active" role="tab" type="button" data-plane="axial" aria-selected="true">Ax</button>
+    <button class="plane-tab" role="tab" type="button" data-plane="sagittal" aria-selected="false">Sag</button>
+    <button class="plane-tab" role="tab" type="button" data-plane="coronal" aria-selected="false">Cor</button>
     <button class="plane-tab" role="tab" type="button" data-plane="volume" aria-selected="false">3D</button>
   </nav>
 
   <main class="grid" id="grid">
     <div class="pane is-active" data-plane="axial">
       <canvas class="pane-canvas" data-plane="axial"></canvas>
-      <div class="pane-name" style="--plane: var(--axial)">Аксиальная</div>
+      <div class="plane-chip" data-plane="axial" style="--plane: var(--plane-axial)">
+        <span class="dot"></span>
+        <span class="chip-name">Axial</span>
+        <b class="chip-value"></b><span class="unit"></span>
+      </div>
       <div class="mark mark-l">R</div>
       <div class="mark mark-r">L</div>
       <div class="pane-empty">нет исследования</div>
     </div>
     <div class="pane" data-plane="sagittal">
       <canvas class="pane-canvas" data-plane="sagittal"></canvas>
-      <div class="pane-name" style="--plane: var(--sagittal)">Сагиттальная</div>
+      <div class="plane-chip" data-plane="sagittal" style="--plane: var(--plane-sagittal)">
+        <span class="dot"></span>
+        <span class="chip-name">Sagittal</span>
+        <b class="chip-value"></b><span class="unit"></span>
+      </div>
       <div class="mark mark-l">A</div>
       <div class="mark mark-r">P</div>
       <div class="pane-empty">нет исследования</div>
     </div>
     <div class="pane" data-plane="coronal">
       <canvas class="pane-canvas" data-plane="coronal"></canvas>
-      <div class="pane-name" style="--plane: var(--coronal)">Корональная</div>
+      <div class="plane-chip" data-plane="coronal" style="--plane: var(--plane-coronal)">
+        <span class="dot"></span>
+        <span class="chip-name">Coronal</span>
+        <b class="chip-value"></b><span class="unit"></span>
+      </div>
       <div class="mark mark-l">R</div>
       <div class="mark mark-r">L</div>
       <div class="pane-empty">нет исследования</div>
     </div>
     <div class="pane" data-plane="volume">
       <canvas class="pane-canvas" data-plane="volume"></canvas>
-      <div class="pane-name">3D</div>
+      <div class="plane-chip" data-plane="volume">
+        <span class="dot"></span>
+        <span class="chip-name">3D</span>
+        <b class="chip-value"></b><span class="unit"></span>
+      </div>
       <!-- Готовые ракурсы, как на Mac: врач крутит череп пальцем, но вернуться
            к прямому виду пальцем точно не получается. -->
       <div class="views" id="views" hidden>
@@ -242,10 +265,6 @@
     </button>
   </div>
 
-  <div class="plate" id="plate" hidden></div>
-  <!-- Короткая метка оговорки. Остаётся на экране, когда подпись уже убрана:
-       врач должен видеть, что объём ужат, но не через весь снимок. -->
-  <button class="plate-badge" id="plate-badge" type="button" hidden></button>
 </section>
 
 <!-- Место занято другим устройством. Поверх всего: снимок смотрят не здесь. -->
@@ -255,6 +274,16 @@
     <p class="notice" id="seat-text"></p>
     <p class="hint">Подписка рассчитана на одного врача: снимок открыт в одном месте за раз.</p>
     <button class="btn btn-primary" id="seat-claim" type="button">Перенести сюда</button>
+  </div>
+</div>
+
+<!-- Чем именно врач смотрит: серия, размер, оговорки. Раньше этот текст висел
+     поверх снимка и закрывал половину экрана телефона. -->
+<div class="sheet" id="notes-sheet" hidden role="dialog" aria-labelledby="notes-title">
+  <div class="sheet-card">
+    <div class="card-title" id="notes-title">Что открыто</div>
+    <p class="notice" id="notes-text"></p>
+    <button class="btn" id="notes-close" type="button">Понятно</button>
   </div>
 </div>
 
@@ -268,6 +297,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=0.6.0"></script>
+<script type="module" src="app.js?v=0.7.0"></script>
 </body>
 </html>
