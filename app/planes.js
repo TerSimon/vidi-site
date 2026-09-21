@@ -12,7 +12,7 @@
 //  сторону наугад — значит однажды оперировать не ту.
 //
 
-import { patientAxes } from './geometry.js?v=0.5.2';
+import { patientAxes } from './geometry.js?v=0.5.3';
 
 export const PLANES = ['axial', 'sagittal', 'coronal'];
 
@@ -114,6 +114,28 @@ export function screenMap(g, layout, dims, widthPx, heightPx, state) {
   stepY[layout.v.axis] = sy;
 
   return { origin, stepX, stepY, mmPerPixel, mmU, mmV };
+}
+
+/**
+ * Увеличение вокруг точки экрана.
+ *
+ * Врач ведёт пальцы к тому месту, которое хочет разглядеть, — оно и должно
+ * остаться под пальцами. Увеличение «в середину панели» уводит нужное место
+ * за край, и приходится ловить его сдвигом.
+ *
+ * Возвращает новое состояние панели с поправленным сдвигом.
+ */
+export function zoomAround(g, layout, dims, widthPx, heightPx, state, px, py, zoom) {
+  const before = screenMap(g, layout, dims, widthPx, heightPx, state);
+  const voxel = screenToVoxel(before, px, py);
+  const next = { ...state, zoom };
+  const after = screenMap(g, layout, dims, widthPx, heightPx, next);
+  const at = voxelToScreen(after, layout, voxel);
+  // Чтобы сдвинуть картинку вправо на dx точек, середину панели надо увести
+  // влево на столько же миллиметров — отсюда знак.
+  next.panU = (next.panU ?? 0) - (px - at[0]) * after.mmPerPixel * (layout.u.flip ? -1 : 1);
+  next.panV = (next.panV ?? 0) - (py - at[1]) * after.mmPerPixel * (layout.v.flip ? -1 : 1);
+  return next;
 }
 
 /** Экранная точка → точка объёма. Тем же преобразованием, что и картинка. */

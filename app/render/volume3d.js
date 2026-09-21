@@ -12,7 +12,7 @@
 //  пациента, даже если объём записан сагиттально.
 //
 
-import { VERT, buildProgram } from './mpr.js?v=0.5.2';
+import { VERT, buildProgram } from './mpr.js?v=0.5.3';
 
 const FRAG = `#version 300 es
 precision highp float;
@@ -30,7 +30,9 @@ uniform vec3 uVoxel;
 uniform vec2 uViewport;
 uniform mat3 uRotation;      // из экранных осей в анатомические
 uniform float uZoom;
+uniform vec2 uPanMM;
 uniform float uStepMM;
+uniform float uGradMM;
 uniform float uSigned;
 uniform float uSlope;
 uniform float uIntercept;
@@ -66,10 +68,20 @@ float atMM(vec3 mm) {
 }
 
 /**
- * Псевдослучайное число по точке экрана. Нужно, чтобы сдвинуть начало луча.
+ * Упорядоченный сдвиг по точке экрана, матрица Байера 4×4. Значения от 0 до 1
+ * разложены так, что соседние точки берут заметно разные глубины, но вся
+ * картина повторяется каждые четыре точки — это рябит куда меньше случайного.
  */
 float dither(vec2 p) {
-  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+  int x = int(mod(p.x, 4.0));
+  int y = int(mod(p.y, 4.0));
+  int i = y * 4 + x;
+  int m =
+    i == 0 ? 0 : i == 1 ? 8 : i == 2 ? 2 : i == 3 ? 10 :
+    i == 4 ? 12 : i == 5 ? 4 : i == 6 ? 14 : i == 7 ? 6 :
+    i == 8 ? 3 : i == 9 ? 11 : i == 10 ? 1 : i == 11 ? 9 :
+    i == 12 ? 15 : i == 13 ? 7 : i == 14 ? 13 : 5;
+  return (float(m) + 0.5) / 16.0;
 }
 
 /** Непрозрачность по плотности: мягкое ткани — прозрачно, кость — плотно. */
@@ -93,8 +105,8 @@ void main() {
   vec3 dir = uRotation * vec3(0.0, 0.0, 1.0);
 
   vec3 origin = center
-    + right * (ndc.x * halfSize * aspect)
-    + up * (ndc.y * halfSize)
+    + right * (ndc.x * halfSize * aspect - uPanMM.x)
+    + up * (ndc.y * halfSize - uPanMM.y)
     - dir * halfSize * 2.0;
 
   // Пересечение с коробкой объёма: марш начинается у самой кости, а не от
@@ -113,7 +125,7 @@ void main() {
   // пробы на одних и тех же глубинах, и объём покрывается ровными полосами —
   // они особенно заметны при вращении, где шаг грубее. Сдвиг превращает
   // полосу в незаметную рябь.
-  enter += dither(gl_FragCoord.xy) * uStepMM;
+  enter += dither(gl_FragCoord.xy) * uStepMM * 0.5;
 
   vec3 colour = vec3(0.0);
   float alpha = 0.0;
@@ -128,8 +140,10 @@ void main() {
     float a = 1.0 - pow(1.0 - aRef * 0.5, uStepMM / 0.5);
     if (a > 0.003) {
       // Нормаль по разнице плотностей вокруг точки: даёт объём, без неё
-      // картинка выглядит плоским туманом.
-      float d = uStepMM;
+      // картинка выглядит плоским туманом. Расстояние взятия — размер точки
+      // объёма, а НЕ шаг луча: при вращении шаг грубее, и нормаль, считанная
+      // по нему, прыгала от точки к точке — это и была рябь.
+      float d = uGradMM;
       vec3 grad = vec3(
         atMM(pos + vec3(d, 0.0, 0.0)) - atMM(pos - vec3(d, 0.0, 0.0)),
         atMM(pos + vec3(0.0, d, 0.0)) - atMM(pos - vec3(0.0, d, 0.0)),
@@ -180,7 +194,9 @@ export class VolumeRenderer {
     gl.uniform2f(u('uViewport'), width, height);
     gl.uniformMatrix3fv(u('uRotation'), false, rotation(view.yaw, view.pitch));
     gl.uniform1f(u('uZoom'), view.zoom ?? 1);
+    gl.uniform2f(u('uPanMM'), view.panX ?? 0, view.panY ?? 0);
     gl.uniform1f(u('uStepMM'), view.stepMM);
+    gl.uniform1f(u('uGradMM'), view.gradMM);
     gl.uniform1f(u('uSigned'), geom.signed ? 1 : 0);
     gl.uniform1f(u('uSlope'), geom.slope);
     gl.uniform1f(u('uIntercept'), geom.intercept);
@@ -197,6 +213,17 @@ export class VolumeRenderer {
  * Вертикаль экрана — это ось «макушка — подбородок», а не третья ось массива:
  * иначе объём, записанный сагиттально, вставал бы на бок.
  */
+/**
+ * Половина видимой области в миллиметрах. Та же формула, что в шейдере:
+ * по ней JS считает, куда сместить камеру, чтобы точка под пальцами осталась
+ * на месте.
+ */
+export function halfView(sizeMM, aspect, zoom) {
+  const fit = Math.min(1, aspect);
+  const half = 0.5 * Math.max(sizeMM.u, sizeMM.v, sizeMM.n) / fit / zoom;
+  return { x: half * aspect, y: half };
+}
+
 export function rotation(yaw, pitch) {
   const cy = Math.cos(yaw), sy = Math.sin(yaw);
   const cp = Math.cos(pitch), sp = Math.sin(pitch);

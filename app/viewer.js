@@ -10,14 +10,15 @@
 //  телефона и уменьшение объёма под память их не сдвигают.
 //
 
-import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.5.2';
-import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen } from './planes.js?v=0.5.2';
-import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.5.2';
-import { buildVolume } from './archive.js?v=0.5.2';
-import { PanoRenderer } from './render/pano.js?v=0.5.2';
-import { VolumeRenderer } from './render/volume3d.js?v=0.5.2';
-import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.5.2';
-import { patientAxes } from './geometry.js?v=0.5.2';
+import { buildGeometry, distanceMM, angleDeg, reduced } from './geometry.js?v=0.5.3';
+import { PLANES, planeLayout, screenMap, screenToVoxel, voxelToScreen, zoomAround }
+  from './planes.js?v=0.5.3';
+import { MPRRenderer, chooseReduction, memoryBudget } from './render/mpr.js?v=0.5.3';
+import { buildVolume } from './archive.js?v=0.5.3';
+import { PanoRenderer } from './render/pano.js?v=0.5.3';
+import { VolumeRenderer, halfView } from './render/volume3d.js?v=0.5.3';
+import { fitArch, defaultArch, sampledColumns, archLength } from './arch.js?v=0.5.3';
+import { patientAxes } from './geometry.js?v=0.5.3';
 
 const $ = (id) => document.getElementById(id);
 
@@ -196,7 +197,7 @@ export async function showVolume(file, series, { onProgress, signal } = {}) {
   // Порог кости подбирается от окна: у конусно-лучевых снимков шкала плавает,
   // и постоянные 300 HU на одном аппарате дают череп, на другом — туман.
   view.volume = {
-    yaw: 0, pitch: 0, zoom: 1, moving: false,
+    yaw: 0, pitch: 0, zoom: 1, panX: 0, panY: 0, moving: false,
     threshold: null, softness: null,
   };
   resetVolumeLook();
@@ -421,6 +422,8 @@ function drawPanorama(p, ctx) {
   ctx.drawImage(renderer.canvas,
     (p.canvas.width - w) / 2 + panoView.panX,
     (p.canvas.height - h) / 2 + panoView.panY, w, h);
+  panoView.last = { fit, width: size.width, height: size.height,
+    canvasW: p.canvas.width, canvasH: p.canvas.height };
 
   label(ctx, p.canvas.width - 14, 26,
     'слой ' + (slab < 10 ? slab.toFixed(1) : Math.round(slab)) + ' мм' +
@@ -430,14 +433,19 @@ function drawPanorama(p, ctx) {
 function drawVolume3D(p, ctx) {
   const v = view.volume;
   const finest = Math.min(study.space.voxel.u, study.space.voxel.v, study.space.voxel.n);
-  // Пока крутят — шаг грубее: важна плавность. Отпустили — мельче: разглядывают
-  // неподвижную картинку.
-  const step = v.moving ? Math.max(1.2, finest * 4) : Math.max(0.45, finest * 1.5);
+  // Шаг луча один и тот же, крутят объём или нет. Грубый шаг при вращении
+  // казался разумной экономией, но кость толщиной в пару точек он проскакивает
+  // — у соседних лучей выходит разный ответ, и это видно как рябь. Экономим
+  // размером расчёта, а не шагом: лишние точки экрана глазу незаметны,
+  // пропущенная кость — заметна.
+  const step = Math.max(0.45, finest * 1.5);
   // Объём считается лучами, и цена кадра — это число точек экрана. Плотность
   // экрана телефона тут не помощник: на объёмной картинке лишние пиксели не
   // видны, а работы прибавляют вчетверо. Поэтому считаем в ограниченном
   // размере и растягиваем.
-  const cap = v.moving ? 380 : 640;
+  // При вращении считаем мельче, но не настолько, чтобы зерно вырастало
+  // вдвое при растягивании на экран.
+  const cap = v.moving ? 512 : 640;
   const longest = Math.max(p.canvas.width, p.canvas.height);
   const scale = Math.min(1, cap / longest);
   const w = Math.max(1, Math.round(p.canvas.width * scale));
@@ -456,7 +464,9 @@ function drawVolume3D(p, ctx) {
     intercept: study.space.intercept,
   }, {
     yaw: v.yaw, pitch: v.pitch, zoom: v.zoom,
+    panX: v.panX, panY: v.panY,
     stepMM: step,
+    gradMM: Math.max(0.35, finest),
     threshold: v.threshold,
     softness: v.softness,
   });
@@ -653,6 +663,8 @@ function resetView() {
   view.volume.yaw = 0;
   view.volume.pitch = 0;
   view.volume.zoom = 1;
+  view.volume.panX = 0;
+  view.volume.panY = 0;
   panoView = { zoom: 1, panX: 0, panY: 0 };
   if (study.arch) study.arch.slabMM = SLAB_STEPS[0];
   resetVolumeLook();
@@ -703,11 +715,15 @@ function bindPointer(plane) {
         look: { ...study.look }, pan: { ...view[plane] } };
     } else if (points.size === 2) {
       const [a, b] = [...points.values()];
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      // Запоминаем ТОЧКУ ОБЪЁМА под пальцами: она и должна остаться под ними,
+      // как бы врач ни свёл и ни развёл пальцы.
       drag = {
         pinch: Math.hypot(a.x - b.x, a.y - b.y),
-        mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+        mid,
+        anchor: screenToVoxel(mapFor(plane), mid.x, mid.y),
+        state: { ...view[plane] },
         zoom: view[plane].zoom,
-        pan: { panU: view[plane].panU, panV: view[plane].panV },
         moved: true,
       };
     }
@@ -720,19 +736,21 @@ function bindPointer(plane) {
     if (drag?.pinch) {
       const two = [...points.values()];
       if (two.length < 2) return;
-      const [a, b] = two;
-      const now = Math.hypot(a.x - b.x, a.y - b.y);
-      if (drag.pinch > 4) {
-        view[plane].zoom = Math.min(8, Math.max(1, drag.zoom * now / drag.pinch));
-      }
-      // Сдвиг середины между пальцами двигает снимок. В миллиметрах, а не в
-      // точках: иначе на уменьшенном объёме рука ехала бы вдвое быстрее.
-      const map = mapFor(plane);
-      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-      view[plane].panU = drag.pan.panU - (mid.x - drag.mid.x) * map.mmPerPixel *
-        (study.layouts[plane].u.flip ? -1 : 1);
-      view[plane].panV = drag.pan.panV - (mid.y - drag.mid.y) * map.mmPerPixel *
-        (study.layouts[plane].v.flip ? -1 : 1);
+      const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
+      const mid = { x: (two[0].x + two[1].x) / 2, y: (two[0].y + two[1].y) / 2 };
+      const zoom = drag.pinch > 4
+        ? Math.min(8, Math.max(1, drag.zoom * now / drag.pinch))
+        : view[plane].zoom;
+      const layout = study.layouts[plane];
+      // Ставим запомненную точку объёма ровно под текущую середину пальцев:
+      // это разом даёт и увеличение к месту, и перемещение двумя пальцами.
+      const next = { ...drag.state, zoom, index: crosshair[layout.n] };
+      const map = screenMap(study.geometry, layout, study.dims,
+        canvas.width, canvas.height, next);
+      const at = voxelToScreen(map, layout, drag.anchor);
+      next.panU -= (mid.x - at[0]) * map.mmPerPixel * (layout.u.flip ? -1 : 1);
+      next.panV -= (mid.y - at[1]) * map.mmPerPixel * (layout.v.flip ? -1 : 1);
+      view[plane] = { zoom: next.zoom, panU: next.panU, panV: next.panV };
       drawPane(plane);
       return;
     }
@@ -796,7 +814,12 @@ function bindVolumePointer() {
         drag = { start: pos(canvas, e), pan: { x: panoView.panX, y: panoView.panY } };
       } else if (points.size === 2) {
         const [a, b] = [...points.values()];
-        drag = { pinch: Math.hypot(a.x - b.x, a.y - b.y), zoom: panoView.zoom };
+        const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        drag = {
+          pinch: Math.hypot(a.x - b.x, a.y - b.y),
+          zoom: panoView.zoom,
+          anchor: panoPointAt(mid),
+        };
       }
       return;
     }
@@ -805,7 +828,12 @@ function bindVolumePointer() {
       view.volume.moving = true;
     } else if (points.size === 2) {
       const [a, b] = [...points.values()];
-      drag = { pinch: Math.hypot(a.x - b.x, a.y - b.y), zoom: view.volume.zoom };
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      drag = {
+        pinch: Math.hypot(a.x - b.x, a.y - b.y),
+        zoom: view.volume.zoom,
+        anchor: volumePointAt(canvas, mid),
+      };
       view.volume.moving = true;
     }
   });
@@ -821,7 +849,10 @@ function bindVolumePointer() {
         const two = [...points.values()];
         if (two.length < 2) return;
         const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
+        const mid = { x: (two[0].x + two[1].x) / 2, y: (two[0].y + two[1].y) / 2 };
         if (drag.pinch > 4) panoView.zoom = Math.min(8, Math.max(1, drag.zoom * now / drag.pinch));
+        // Запомненная точка картинки возвращается под пальцы.
+        panoPutUnder(drag.anchor, mid);
       } else {
         const here = pos(canvas, e);
         panoView.panX = drag.pan.x + (here.x - drag.start.x);
@@ -835,7 +866,11 @@ function bindVolumePointer() {
       const two = [...points.values()];
       if (two.length < 2) return;
       const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
-      if (drag.pinch > 4) view.volume.zoom = Math.min(6, Math.max(0.5, drag.zoom * now / drag.pinch));
+      const mid = { x: (two[0].x + two[1].x) / 2, y: (two[0].y + two[1].y) / 2 };
+      if (drag.pinch > 4) {
+        view.volume.zoom = Math.min(6, Math.max(0.5, drag.zoom * now / drag.pinch));
+      }
+      volumePutUnder(canvas, drag.anchor, mid);
       drawVolumePane();
       return;
     }
@@ -873,6 +908,52 @@ function capture(canvas, e) {
   } catch (err) {
     // Не беда: без захвата события всё равно доходят до этого canvas.
   }
+}
+
+/** Какая точка развёртки лежит под этой точкой экрана. */
+function panoPointAt(at) {
+  const l = panoView.last;
+  if (!l) return { x: 0, y: 0 };
+  const scale = l.fit * panoView.zoom;
+  return {
+    x: (at.x - (l.canvasW - l.width * scale) / 2 - panoView.panX) / scale,
+    y: (at.y - (l.canvasH - l.height * scale) / 2 - panoView.panY) / scale,
+  };
+}
+
+/** Кладёт точку развёртки под заданную точку экрана. */
+function panoPutUnder(point, at) {
+  const l = panoView.last;
+  if (!l) return;
+  const scale = l.fit * panoView.zoom;
+  panoView.panX = at.x - point.x * scale - (l.canvasW - l.width * scale) / 2;
+  panoView.panY = at.y - point.y * scale - (l.canvasH - l.height * scale) / 2;
+}
+
+/**
+ * Куда в миллиметрах смотрит эта точка экрана в объёмном виде. Считается по
+ * той же формуле, что в шейдере, — иначе щипок и картинка разойдутся.
+ */
+function volumeNDC(canvas, at) {
+  return {
+    x: (at.x / canvas.width) * 2 - 1,
+    y: 1 - (at.y / canvas.height) * 2,
+  };
+}
+
+function volumePointAt(canvas, at) {
+  const v = view.volume;
+  const half = halfView(study.space.sizeMM, canvas.width / canvas.height, v.zoom);
+  const ndc = volumeNDC(canvas, at);
+  return { x: ndc.x * half.x - v.panX, y: ndc.y * half.y - v.panY };
+}
+
+function volumePutUnder(canvas, point, at) {
+  const v = view.volume;
+  const half = halfView(study.space.sizeMM, canvas.width / canvas.height, v.zoom);
+  const ndc = volumeNDC(canvas, at);
+  v.panX = ndc.x * half.x - point.x;
+  v.panY = ndc.y * half.y - point.y;
 }
 
 function pos(canvas, e) {
@@ -930,8 +1011,15 @@ export function viewerState() {
     notes: study.notes,
     crosshair: crosshair.slice(),
     measures: measures.map((m) => ({ kind: m.kind, plane: m.plane, text: measureText(m) })),
+    zoom: view?.axial?.zoom ?? 1,
     window: { center: study.look.center, width: study.look.width },
   };
+}
+
+/** Для проверок: точка экрана панели → точка объёма. */
+export function fromScreen(plane, px, py) {
+  if (!study) return null;
+  return screenToVoxel(mapFor(plane), px, py);
 }
 
 /** Для проверок: сколько занимает один кадр четвёртой панели, мс. */
@@ -977,12 +1065,12 @@ export function measureAt(plane, points, kind = 'ruler') {
 
 // Опоры для автоматических проверок.
 //
-// Через import их не взять: у './viewer.js?v=0.5.2' и './viewer.js?v=0.5.2'
+// Через import их не взять: у './viewer.js?v=0.5.3' и './viewer.js?v=0.5.3'
 // разные экземпляры модуля, и проверка получила бы пустой просмотр вместо
 // открытого. Номер в адресе меняется каждый выпуск, поэтому проверки
 // цепляются сюда, а не за адрес. Внутренности приложения в браузере и так
 // открыты — тайны тут нет.
 globalThis.__vidiViewer = {
-  state: viewerState, paneMap, toScreen, measureAt, setZoom, selectPlane, clearMeasures,
-  setFourth, timeFourth,
+  state: viewerState, paneMap, toScreen, fromScreen, measureAt, setZoom, selectPlane,
+  clearMeasures, setFourth, timeFourth,
 };

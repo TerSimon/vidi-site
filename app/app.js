@@ -11,12 +11,12 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, describeHolder, SEAT_PING_MS,
-} from './auth.js?v=0.5.2';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=0.5.2';
+} from './auth.js?v=0.5.3';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled } from './archive.js?v=0.5.3';
 import { attachViewer, showVolume, clearVolume, selectPlane, layoutViewer }
-  from './viewer.js?v=0.5.2';
+  from './viewer.js?v=0.5.3';
 
-const VERSION = '0.5.2';
+const VERSION = '0.5.3';
 const STAGE = 'панорама';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
