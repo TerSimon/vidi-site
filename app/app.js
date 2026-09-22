@@ -11,7 +11,7 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, describeHolder, SEAT_PING_MS,
-} from './auth.js?v=0.9.0';
+} from './auth.js?v=0.9.1';
 /*
   Код просмотра НЕ лежит рядом файлом. Браузерная версия считает снимок сама,
   серверу для просмотра не нужно ничего — значит, лежи просмотр на сайте, им
@@ -29,10 +29,10 @@ async function loadViewer() {
   V.attachViewer();
   return V;
 }
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.0';
-import { moduleTicket, moduleURL } from './auth.js?v=0.9.0';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.1';
+import { moduleTicket, moduleURL } from './auth.js?v=0.9.1';
 
-const VERSION = '0.9.0';
+const VERSION = '0.9.1';
 const STAGE = 'панорама';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────

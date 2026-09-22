@@ -25,7 +25,7 @@
 
 import './vendor/zip.min.js';
 import SevenZip from './vendor/7zz.es6.js';
-import { readDicomHeader } from './dicom.js?v=0.9.0';
+import { readDicomHeader } from './dicom.js?v=0.9.1';
 
 const zip = globalThis.zip;
 zip.configure({ useWebWorkers: false });
