@@ -1,6 +1,7 @@
 //
-//  Оболочка Vidi в браузере. Этап 5 — вход по подписке и правило «одно место за
-//  раз». Просмотр пока каркас: ни DICOM, ни архивов здесь ещё нет.
+//  Оболочка Vidi в браузере: вход по подписке, правило «одно место за раз»,
+//  открытие архива и выбор серии. Сам просмотр — отдельный модуль, который
+//  сервер отдаёт только вошедшему устройству (см. loadViewer).
 //
 //  Два правила действуют с самого начала, чтобы позже их не пришлось вносить
 //  через весь код:
@@ -10,8 +11,10 @@
 //
 
 import {
-  auth, activate, check, signOut, seat, storageWorks, describeHolder, SEAT_PING_MS,
-} from './auth.js?v=0.9.1';
+  auth, activate, check, signOut, seat, storageWorks, SEAT_PING_MS, moduleTicket, moduleURL,
+} from './auth.js?v=0.9.2';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.2';
+
 /*
   Код просмотра НЕ лежит рядом файлом. Браузерная версия считает снимок сама,
   серверу для просмотра не нужно ничего — значит, лежи просмотр на сайте, им
@@ -25,15 +28,22 @@ async function loadViewer() {
   if (V) return V;
   const ticket = await moduleTicket();
   if (!ticket) throw new Error('module-denied');
-  V = await import(moduleURL('viewer.js', ticket));
-  V.attachViewer();
+  let mod;
+  try {
+    mod = await import(moduleURL('viewer.js', ticket));
+  } catch (e) {
+    // Билет выдан, а файл не дошёл: оборвалась связь или билет истёк на
+    // медленном телефоне. Для врача это тот же отказ в доступе к просмотру,
+    // а не «не удалось построить объём».
+    console.error('[APP-3]', e);
+    throw new Error('module-denied');
+  }
+  mod.attachViewer({ onContextLost: viewerLost });
+  V = mod;
   return V;
 }
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.1';
-import { moduleTicket, moduleURL } from './auth.js?v=0.9.1';
 
-const VERSION = '0.9.1';
-const STAGE = 'панорама';
+const VERSION = '0.9.2';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
 
@@ -309,13 +319,25 @@ function showBlocked(title, text) {
 $('blocked-retry').addEventListener('click', () => { boot(); });
 
 $('blocked-signout').addEventListener('click', async () => {
+  const btn = $('blocked-signout');
+  btn.disabled = true;
   const r = await signOut();
+  btn.disabled = false;
   if (r.result === 'resetLimit') {
     $('blocked-text').textContent = r.retryAfterDays
       ? `Сбросы закончились: следующий через ${r.retryAfterDays} ${plural(r.retryAfterDays, 'день', 'дня', 'дней')}. Выйти сейчас нельзя.`
       : 'Сбросы в этом месяце закончились. Выйти сейчас нельзя.';
     return;
   }
+  // Выход не прошёл — вход остался в браузере. Показать форму входа значило
+  // бы соврать: врач решит, что вышел, а при следующем открытии окажется
+  // внутри.
+  if (r.result === 'network') {
+    $('blocked-text').textContent = 'Нет связи с сервером — выйти не получилось. Проверьте интернет и попробуйте ещё раз.';
+    return;
+  }
+  // Непонятный ответ сервера по-прежнему ведёт к форме входа: это выход из
+  // тупика, когда вход в браузере испорчен, — повторный вход его перезапишет.
   showLogin();
 });
 
@@ -362,6 +384,14 @@ const seatSheet = $('seat-sheet');
 let seatTimer = null;
 let seatFailures = 0;
 let seatTaken = false;
+// Ответы на «я открыт» приходят не по порядку: обычный сигнал, ушедший чуть
+// раньше «Перенести сюда», может вернуться позже него и снова показать экран
+// «открыт в другом месте». Поэтому у каждого запроса свой номер, и ответ
+// старее уже учтённого отбрасывается. Смена сеанса (вход, выход) начинает
+// счёт заново — запоздалый ответ прежнего сеанса не должен всплыть на экране входа.
+let seatSeq = 0;
+let seatApplied = 0;
+let seatSession = 0;
 
 // Столько подряд неудачных обращений держим прежнюю картину. Обрыв связи не
 // имеет права закрыть врачу снимок: три пропуска — и экран отпускает сам.
@@ -379,7 +409,11 @@ function hideSeatTaken() {
 }
 
 async function pingSeat({ claim = false } = {}) {
+  const session = seatSession;
+  const mine = ++seatSeq;
   const r = await seat({ claim });
+  if (session !== seatSession || mine < seatApplied) return;
+  seatApplied = mine;
 
   switch (r.result) {
     case 'mine':
@@ -416,6 +450,7 @@ function startSeat() {
 function stopSeat() {
   if (seatTimer) clearInterval(seatTimer);
   seatTimer = null;
+  seatSession += 1;          // ответы, ещё идущие по сети, больше не наши
   hideSeatTaken();
 }
 
@@ -536,7 +571,9 @@ function showFoundStudy(found) {
 
   $('study-patient').textContent = personName(study.patientName);
   const date = studyDate(study.studyDate);
-  const total = found.stats.dicom;
+  // Служебные файлы с меткой DICOM (оглавление, проект просмотрщика) — не
+  // снимки: иначе «снимков: 451» при серии из 450 выглядит потерей среза.
+  const total = found.stats.dicom - (found.stats.indexFiles ?? 0);
   $('study-sub').textContent = [date, 'снимков: ' + total].filter(Boolean).join(' · ');
 
   const list = $('series-list');
@@ -675,6 +712,8 @@ async function runVolume(file, series) {
       showError('VOL-2', 'Этот объём не помещается в память устройства даже уменьшенным.');
     } else if (e.message === 'upload') {
       showError('VOL-3', 'Видеокарта не приняла объём. Закройте другие вкладки и попробуйте снова.');
+    } else if (e.message === 'lost') {
+      showError('VOL-4', LOST_TEXT);
     } else {
       showError('VOL-0', 'Не удалось построить объём.', e);
     }
@@ -745,12 +784,33 @@ $('btn-back').addEventListener('click', () => {
   showScreen(foundStudy ? 'study' : 'start');
 });
 
+const LOST_TEXT = 'Браузер выгрузил снимок из памяти видеокарты — так бывает, когда вкладка ' +
+  'долго в фоне. Нажмите «Открыть» ещё раз: архив выбирать заново не нужно.';
+
+/*
+  Браузер отнял у страницы видеокарту. Объём пропал вместе с ней, и
+  просмотр уже сам себя очистил; здесь — сказать врачу, что случилось, и
+  вернуть его туда, откуда снимок открывается одним нажатием. Файл архива и
+  выбранная серия остаются, второй проход пойдёт сразу.
+
+  Если объём в это время ещё строился, говорить будет runVolume: сборка
+  закончится отказом 'lost'.
+*/
+function viewerLost(hadStudy) {
+  if (!hadStudy || current !== 'viewer') return;
+  showNotes(false);
+  $('plate-badge').hidden = true;
+  showScreen(foundStudy ? 'study' : 'start');
+  showError('VOL-4', LOST_TEXT);
+}
+
 // ─── Запуск ────────────────────────────────────────────────────────────────
 
-const versionLabel = VERSION + ' · ' + STAGE;
-$('version-login').textContent = 'Vidi ' + versionLabel;
-$('version-start').textContent = 'Vidi ' + versionLabel;
-$('version-blocked').textContent = 'Vidi ' + versionLabel;
+// Только номер выпуска: по нему видно, дошло ли обновление до телефона.
+// Название этапа здесь стояло со времён сборки и врачу ничего не говорило.
+$('version-login').textContent = 'Vidi ' + VERSION;
+$('version-start').textContent = 'Vidi ' + VERSION;
+$('version-blocked').textContent = 'Vidi ' + VERSION;
 
 async function boot() {
   showScreen('boot');

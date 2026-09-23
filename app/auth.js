@@ -81,16 +81,29 @@ function deviceID(state) {
   return 'web-' + rnd;
 }
 
-/** Как устройство будет названо на экране перехвата у врача на Mac. */
+/**
+ * Как устройство будет названо на экране перехвата у врача на Mac и в отказе
+ * «уже привязан другой браузер». По этому имени врач решает, свой это браузер
+ * или чужой, поэтому оно должно быть узнаваемым.
+ *
+ * Порядок проверок важен: Яндекс Браузер, Edge и Opera несут в строке и
+ * «Chrome», а Chrome и Firefox на iPhone — ещё и «Safari».
+ */
 export function deviceName() {
   const ua = navigator.userAgent;
   const browser =
+    /YaBrowser/.test(ua) ? 'Яндекс Браузер' :
+    /EdgA?\/|EdgiOS/.test(ua) ? 'Edge' :
+    /OPR\/|OPiOS/.test(ua) ? 'Opera' :
     /CriOS|Chrome/.test(ua) ? 'Chrome' :
-    /Firefox/.test(ua) ? 'Firefox' :
+    /FxiOS|Firefox/.test(ua) ? 'Firefox' :
     /Safari/.test(ua) ? 'Safari' : 'Браузер';
+  // iPad с iPadOS 13 и новее пишет о себе «Macintosh»; выдаёт его сенсорный
+  // экран — у Mac его нет.
+  const iPadAsMac = /Macintosh/.test(ua) && (navigator.maxTouchPoints ?? 0) > 1;
   const platform =
     /iPhone/.test(ua) ? 'iPhone' :
-    /iPad/.test(ua) ? 'iPad' :
+    /iPad/.test(ua) || iPadAsMac ? 'iPad' :
     /Android/.test(ua) ? 'Android' :
     /Mac/.test(ua) ? 'Mac' :
     /Windows/.test(ua) ? 'Windows' : '';
@@ -99,26 +112,39 @@ export function deviceName() {
 
 // ─── Сеть ──────────────────────────────────────────────────────────────────
 
+// Сколько ждём ответа сервера. Без предела зависший сервер (соединение есть,
+// ответа нет) держал экран «Проверяем доступ…» и кнопку «Проверяем…» столько,
+// сколько браузер сочтёт нужным, — на телефоне это минуты. После предела
+// запрос считается обрывом связи, и врач видит, что делать.
+const REQUEST_TIMEOUT_MS = 15_000;
+
 /**
  * Обрыв связи и ответ сервера — разные вещи, и их нельзя путать: по первому
  * врача запирать нельзя, по второму иногда нужно.
  */
 async function post(path, body) {
-  let res;
+  const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), REQUEST_TIMEOUT_MS) : null;
   try {
-    res = await fetch(API + '/' + path, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-      cache: 'no-store',
-    });
-  } catch (e) {
-    throw new NetworkError();
-  }
-  try {
-    return await res.json();
-  } catch (e) {
-    throw new NetworkError();
+    let res;
+    try {
+      res = await fetch(API + '/' + path, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+        cache: 'no-store',
+        signal: ctl?.signal,
+      });
+    } catch (e) {
+      throw new NetworkError();
+    }
+    try {
+      return await res.json();
+    } catch (e) {
+      throw new NetworkError();
+    }
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -128,7 +154,6 @@ export class NetworkError extends Error {}
 
 export const auth = {
   email: null,
-  isSuper: false,
   paidUntil: null,
 
   get signedIn() {
@@ -170,7 +195,6 @@ export async function activate(email, code) {
     const saved = save({ id, token: r.device_token, email: r.email ?? email });
     if (!saved) return { result: 'storage' };
     auth.email = r.email ?? email;
-    auth.isSuper = !!r.is_super;
     auth.paidUntil = r.paid_until ?? null;
     return { result: r.active ? 'ok' : 'locked', paidUntil: r.paid_until ?? null };
   }

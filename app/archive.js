@@ -24,8 +24,10 @@ export class ArchiveError extends Error {
  */
 function explain(reason) {
   if (reason === 'unknown-format') {
+    // Папку здесь не обещаем: выбрать её в браузере нельзя, а на телефоне
+    // нельзя и подавно.
     return new ArchiveError('ARC-1',
-      'Не удалось распознать архив. Vidi открывает ZIP, RAR, 7z и папку с файлами DICOM.');
+      'Не удалось распознать архив. Vidi открывает ZIP, RAR, 7z и файлы DICOM (.dcm).');
   }
   if (reason === 'too-deep') {
     return new ArchiveError('ARC-2', 'В архиве слишком много вложенных архивов.');
@@ -40,10 +42,17 @@ function explain(reason) {
   return new ArchiveError('ARC-5', 'Не удалось открыть архив.');
 }
 
-/** Доля выполненного, 0…1. До оглавления архива она неизвестна. */
+/**
+ * Доля выполненного, 0…1. До оглавления архива она неизвестна.
+ *
+ * Считается по элементам ВЕРХНЕГО уровня (`topDone`): файлы вложенного архива
+ * тоже попадают в общий счётчик, и по нему полоса вставала на 100 % в самом
+ * начале. Когда наверху один элемент — обычно это и есть вложенный архив, — его
+ * доля ничего не говорит, и полоса честно показывает «идёт работа».
+ */
 export function progressOf(stats) {
-  if (!stats || !stats.entriesTotal) return null;
-  return Math.min(1, stats.files / stats.entriesTotal);
+  if (!stats || !stats.entriesTotal || stats.entriesTotal < 2) return null;
+  return Math.min(1, (stats.topDone ?? stats.files) / stats.entriesTotal);
 }
 
 /** Врач нажал «Отмена». Не ошибка — показывать её как сбой нельзя. */
@@ -65,7 +74,7 @@ function runWorker(message, { onProgress, signal }, handle) {
     if (signal?.aborted) { reject(new ArchiveCancelled()); return; }
     let worker;
     try {
-      worker = new Worker(new URL('./archive/worker.js?v=0.9.1', import.meta.url), { type: 'module' });
+      worker = new Worker(new URL('./archive/worker.js?v=0.9.2', import.meta.url), { type: 'module' });
     } catch (e) {
       reject(new ArchiveError('ARC-6', 'Браузер не смог запустить распаковку.'));
       return;
@@ -90,8 +99,8 @@ function runWorker(message, { onProgress, signal }, handle) {
 
     worker.onerror = () => finish(reject, new ArchiveError('ARC-9', 'Распаковка прервалась.'));
 
-    // Перенос объёма без копии: после отправки буфер на стороне потока пуст,
-    // и телефон не держит два объёма разом.
+    // Файл уходит в поток ссылкой, не копией. Готовый объём поток возвращает
+    // переносом буфера (см. worker.js), так что два объёма разом телефон не держит.
     worker.postMessage(message);
   });
 }
@@ -106,7 +115,10 @@ export function openArchive(file, { onProgress, signal } = {}) {
     if (data.type !== 'done') return;
     const stats = data.stats;
     const study = data.study;
-    if (stats.dicom === 0) {
+    // Служебные файлы с меткой DICOM (оглавление, проект просмотрщика) снимками
+    // не считаются: архив из них одних — это архив без снимков, а не «снимки
+    // есть, но не прочитались».
+    if (stats.dicom - (stats.indexFiles ?? 0) === 0) {
       // Пустой результат — не ошибка распаковки, и путать их нельзя:
       // врачу важно, снимков нет или архив не открылся.
       reject(stats.encrypted > 0

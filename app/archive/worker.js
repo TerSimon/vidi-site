@@ -25,7 +25,7 @@
 
 import './vendor/zip.min.js';
 import SevenZip from './vendor/7zz.es6.js';
-import { readDicomHeader } from './dicom.js?v=0.9.1';
+import { readDicomHeader } from './dicom.js?v=0.9.2';
 
 const zip = globalThis.zip;
 zip.configure({ useWebWorkers: false });
@@ -54,6 +54,11 @@ function newStats() {
     format: '',
     files: 0,
     entriesTotal: 0,
+    // Сколько элементов ВЕРХНЕГО уровня архива разобрано до конца, вместе с
+    // вложенными архивами. По нему идёт полоса хода: счётчик файлов растёт и
+    // от содержимого вложенных, и полоса упиралась в 100 % на первом же.
+    topDone: 0,
+    warnings: 0,
     dicom: 0,
     dicomBytes: 0,
     truncated: 0,
@@ -247,8 +252,9 @@ function handleDicom(bytes, size) {
     h = null;
   }
   if (!h) { stats.unreadable++; return; }
-  // Оглавление архива — не срез: в опись оно не идёт и тревоги не вызывает.
-  if (h.directory) { stats.indexFiles++; return; }
+  // Оглавление архива или файл проекта просмотрщика — не срез: в опись они не
+  // идут и тревоги не вызывают.
+  if (h.service) { stats.indexFiles++; return; }
 
   if (!study.patientName && h.patientName) study.patientName = h.patientName;
   if (!study.patientID && h.patientID) study.patientID = h.patientID;
@@ -290,6 +296,23 @@ function handleDicom(bytes, size) {
     series.sops.add(h.sopUID);
   }
 
+  if (h.frames > 1) {
+    // Enhanced CT: весь объём в одном файле. Каждый кадр — свой срез со своим
+    // положением; без положений по кадрам их нет вовсе (см. dicom.js), и
+    // порядок держится на номере — как разворачивает такие файлы Mac.
+    const base = Number.isFinite(h.instanceNumber) ? h.instanceNumber : 0;
+    for (let f = 0; f < h.frames; f++) {
+      series.slices.push({
+        key: frameKey(h, f),
+        sop: h.sopUID,
+        instance: base + f,
+        position: h.framePositions?.[f] ?? null,
+        frames: 1,
+      });
+    }
+    return;
+  }
+
   series.slices.push({
     key: sliceKey(h),
     sop: h.sopUID,
@@ -310,6 +333,11 @@ function sliceKey(h) {
   if (h.sopUID) return h.sopUID;
   if (Number.isFinite(h.instanceNumber)) return 'i' + h.instanceNumber;
   return '';
+}
+
+/** Ключ кадра многокадрового файла: UID файла плюс номер кадра. */
+function frameKey(h, f) {
+  return sliceKey(h) + '#' + f;
 }
 
 // ─── Второй проход: объём ──────────────────────────────────────────────────
@@ -336,40 +364,66 @@ function startFill(plan) {
     // Куда класть срез: ключ → номер в отсортированном порядке.
     index: new Map(plan.order.map((key, i) => [key, i])),
     placed: new Set(),
-    // Для автоматического окна: гистограмма значений, 4096 корзин на весь
-    // 16-битный размах. Считать её потом отдельным проходом по объёму — это
-    // ещё 66 миллионов чтений, а здесь значения уже в руках.
-    histogram: new Uint32Array(4096),
+    // Для автоматического окна: гистограмма значений по 16 на корзину.
+    // Считать её потом отдельным проходом по объёму — это ещё 66 миллионов
+    // чтений, а здесь значения уже в руках.
+    //
+    // Корзины покрывают и знаковый размах (−32768…32767), и беззнаковый
+    // (0…65535): 6144 штуки от −32768 до 65535. Прежние 4096 кончались на
+    // 32767, и яркие точки беззнаковых снимков молча выпадали из окна. Номер
+    // корзины переводится в значение той же формулой, что и раньше.
+    histogram: new Uint32Array(6144),
     filled: 0,
     skipped: 0,
   };
 }
 
-/** Кладёт пиксели одного среза в объём. */
+// Недостача пикселей, которую прощаем, байт. Vatech/Picasso пишут в заголовке
+// полный размер, а последние 0…2 нулевых байта в файл не кладут; на Mac это
+// лечится добивкой нулями до 16 байт — так же и здесь. Без неё такой срез
+// пропускался, и у этих аппаратов не ложился ни один.
+const SHORT_TOLERANCE = 16;
+
+/** Кладёт пиксели одного файла в объём: один срез или все кадры многокадрового. */
 function fillSlice(bytes, size) {
   if (bytes.length < size) { stats.truncated++; return; }
   let h;
   try { h = readDicomHeader(bytes); } catch (e) { h = null; }
-  if (!h || h.directory) return;
+  if (!h || h.service) return;
   if (h.seriesUID !== fill.seriesUID) return;
 
-  const at = fill.index.get(sliceKey(h));
-  if (at === undefined) { fill.skipped++; return; }
-  // Повтор того же среза: первый уже лёг, второй только затёр бы его собой.
-  if (fill.placed.has(at)) return;
-  if (at % fill.stepZ !== 0) { fill.placed.add(at); return; }
-  const k = at / fill.stepZ;
-  if (k >= fill.out.d) return;
+  const frames = h.frames > 1 ? h.frames : 1;
+  const frameBytes = h.rows * h.columns * 2;
+  // pixelAt 0 — пикселей в файле не нашлось: читать с начала файла значило бы
+  // положить в объём заголовок вместо снимка.
+  const usable = h.rows === fill.rows && h.columns === fill.columns &&
+    h.bitsAllocated === 16 && h.samples === 1 && !h.encapsulated && h.pixelAt > 0;
+  // Сколько байт пикселей реально лежит в файле после начала элемента.
+  const avail = Math.max(0, bytes.length - h.pixelAt);
 
-  const need = h.rows * h.columns * 2;
-  if (h.rows !== fill.rows || h.columns !== fill.columns ||
-      h.bitsAllocated !== 16 || h.samples !== 1 || h.encapsulated ||
-      h.pixelAt + need > bytes.length) {
-    fill.skipped++;
-    return;
+  for (let f = 0; f < frames; f++) {
+    const at = fill.index.get(frames > 1 ? frameKey(h, f) : sliceKey(h));
+    if (at === undefined) { fill.skipped++; continue; }
+    // Повтор того же среза: первый уже лёг, второй только затёр бы его собой.
+    if (fill.placed.has(at)) continue;
+    if (at % fill.stepZ !== 0) { fill.placed.add(at); continue; }
+    const k = at / fill.stepZ;
+    if (k >= fill.out.d) continue;
+
+    const offset = f * frameBytes;
+    const have = Math.min(frameBytes, Math.max(0, avail - offset));
+    if (!usable || frameBytes - have > SHORT_TOLERANCE) { fill.skipped++; continue; }
+
+    placeFrame(sourceView(bytes, h.pixelAt + offset, h.rows * h.columns, h.bigEndian, have),
+      h, k);
+    fill.placed.add(at);
+    fill.filled++;
   }
+  tick();
+}
 
-  const src = sourceView(bytes, h.pixelAt, h.rows * h.columns, h.bigEndian);
+/** Один кадр — в объём, с уменьшением и гистограммой. */
+function placeFrame(src, h, k) {
   const { w, h: oh } = fill.out;
   const step = fill.stepXY;
   const out = fill.data;
@@ -389,24 +443,22 @@ function fillSlice(bytes, size) {
       hist[(d + 32768) >> 4]++;
     }
   }
-
-  fill.placed.add(at);
-  fill.filled++;
-  tick();
 }
 
 /**
  * Пиксели среза как 16-битные значения. Быстрый путь — без копии, прямо по
- * памяти файла; он требует чётного смещения и прямого порядка байт.
+ * памяти файла; он требует чётного смещения, прямого порядка байт и полного
+ * кадра. Иначе — копия, у которой недостающий хвост остаётся нулями.
  */
-function sourceView(bytes, at, count, bigEndian) {
+function sourceView(bytes, at, count, bigEndian, have = count * 2) {
   const start = bytes.byteOffset + at;
-  if (!bigEndian && start % 2 === 0) {
+  if (have >= count * 2 && !bigEndian && start % 2 === 0) {
     return new Uint16Array(bytes.buffer, start, count);
   }
-  const view = new DataView(bytes.buffer, start, count * 2);
+  const n = Math.min(count, Math.floor(have / 2));
+  const view = new DataView(bytes.buffer, start, n * 2);
   const copy = new Uint16Array(count);
-  for (let i = 0; i < count; i++) copy[i] = view.getUint16(i * 2, !bigEndian);
+  for (let i = 0; i < n; i++) copy[i] = view.getUint16(i * 2, !bigEndian);
   return copy;
 }
 
@@ -486,6 +538,7 @@ async function readZip(source, depth) {
       if (entry.directory) continue;
       if (entry.encrypted) {
         stats.encrypted++;
+        if (depth === 0) stats.topDone++;
         continue;
       }
       const result = await entry.getData(new SinkWriter(), { checkSignature: true });
@@ -494,6 +547,7 @@ async function readZip(source, depth) {
       // Вложенный архив разбираем сразу: иначе все вложенные копились бы в памяти
       // до конца внешнего архива.
       if (inner) await readAny(inner, depth + 1);
+      if (depth === 0) stats.topDone++;
     }
   } finally {
     await zipReader.close();
@@ -560,15 +614,23 @@ function normalizePath(path) {
 // Оглавление архива: размер каждого файла (приёмник выделяет буфер один раз) и
 // точное имя элемента — по нему второй проход достаёт вложенный архив.
 // 7-Zip читает оглавление без распаковки, поэтому это быстро даже для RAR.
+//
+// Заодно — какие элементы зашифрованы: 7-Zip пишет «Encrypted = +» после
+// размера. Без пароля такие элементы не распаковать, и 7-Zip отвечает на них
+// ошибкой — архив под паролем выглядел бы испорченным.
 async function listEntries(blob, name) {
   const entries = new Map();
   let path = null;
+  let last = null;
   const module = await newSevenZip((line) => {
     const at = line.indexOf('Path = ');
     if (at !== -1) path = line.slice(at + 7);
     else if (line.startsWith('Size = ') && path !== null) {
-      entries.set(normalizePath(path), { size: Number(line.slice(7)), itemPath: path });
+      last = { size: Number(line.slice(7)) || 0, itemPath: path, encrypted: false };
+      entries.set(normalizePath(path), last);
       path = null;
+    } else if (line.startsWith('Encrypted = +') && last) {
+      last.encrypted = true;
     }
   });
   mountArchive(module, blob, name);
@@ -578,6 +640,66 @@ async function listEntries(blob, name) {
     // без оглавления файлы собираются из кусков, а вложенные архивы держатся в памяти
   }
   return entries;
+}
+
+/** Читает кусок архива: и из File, и из уже распакованного буфера. */
+function readRange(source, from, to) {
+  const end = Math.min(to, source.size ?? source.length);
+  if (from >= end) return new Uint8Array(0);
+  if (source instanceof Uint8Array) return source.subarray(from, end);
+  return new Uint8Array(new FileReaderSync().readAsArrayBuffer(source.slice(from, end)));
+}
+
+/**
+ * Зашифровано ли само оглавление архива (7z -mhe, RAR -hp). Такой архив 7-Zip
+ * без пароля даже не перечисляет — падает молча, без кода и без текста, и
+ * отличить его от испорченного можно только по заголовку. Ошибка здесь стоит
+ * мало: не распознали — архив, как и раньше, назовётся повреждённым.
+ */
+function headerEncrypted(source, kind) {
+  try {
+    if (kind === '7z') {
+      // Стартовый заголовок: смещение и размер основного заголовка. Если он
+      // закодирован (0x17) и среди кодеков есть AES (06 F1 07 01) — зашифрован.
+      const start = readRange(source, 0, 32);
+      if (start.length < 32) return false;
+      const v = new DataView(start.buffer, start.byteOffset, 32);
+      const offset = Number(v.getBigUint64(12, true));
+      const size = Number(v.getBigUint64(20, true));
+      if (!(size > 0) || size > 1 << 20) return false;
+      const next = readRange(source, 32 + offset, 32 + offset + size);
+      if (next.length < 1 || next[0] !== 0x17) return false;
+      for (let i = 0; i + 4 <= next.length; i++) {
+        if (next[i] === 0x06 && next[i + 1] === 0xf1 && next[i + 2] === 0x07 && next[i + 3] === 0x01) return true;
+      }
+      return false;
+    }
+    if (kind === 'rar5') {
+      // Сразу за подписью — заголовок шифрования (тип 4), если оглавление закрыто.
+      const head = readRange(source, 8, 40);
+      let at = 4;                                 // CRC32
+      const vint = () => {
+        let value = 0, shift = 0;
+        while (at < head.length) {
+          const b = head[at++];
+          value += (b & 0x7f) * 2 ** shift;
+          if (!(b & 0x80)) return value;
+          shift += 7;
+        }
+        return -1;
+      };
+      if (vint() < 0) return false;               // размер заголовка
+      return vint() === 4;                        // тип заголовка
+    }
+    if (kind === 'rar') {
+      // RAR 4: главный заголовок (0x73) с флагом 0x0080 — «заголовки зашифрованы».
+      const head = readRange(source, 7, 12);
+      return head.length === 5 && head[2] === 0x73 && (head[3] & 0x80) !== 0;
+    }
+  } catch (e) {
+    return false;
+  }
+  return false;
 }
 
 // Перехват записи 7-Zip в /out: данные идут в Sink, а не в файловую систему.
@@ -631,7 +753,14 @@ function interceptOutput(module, entries, keepArchives, onFile) {
   };
 }
 
-function runSevenZip(module, args) {
+/**
+ * Запуск 7-Zip. Код 1 — предупреждение (лишние данные в конце архива и тому
+ * подобное): всё распакованное при этом цело, и выбрасывать найденные снимки
+ * из-за него нельзя. Код 2 прощается, только если архив содержит зашифрованные
+ * элементы (`encrypted`): это 7-Zip так отвечает на пароль-заглушку, а
+ * незашифрованное он распаковал.
+ */
+function runSevenZip(module, args, { encrypted = false } = {}) {
   let code;
   try {
     // Пароль-заглушка: без него 7-Zip ждёт ввода и зависает на зашифрованном архиве.
@@ -641,6 +770,8 @@ function runSevenZip(module, args) {
   }
   stats.sevenZipRuns++;
   stats.wasmHeapMB = Math.max(stats.wasmHeapMB, lastWasmHeapMB());
+  if (code === 1) { stats.warnings++; return; }
+  if (code === 2 && encrypted) return;
   if (code !== 0) throw new Error(`7z:${sevenZipError(code)}`);
 }
 
@@ -649,11 +780,24 @@ function runSevenZip(module, args) {
 // вложенного архива, а копить их все до конца — это сотни мегабайт. Второй
 // проход достаёт вложенные архивы по одному и сразу разбирает.
 async function readWith7z(source, depth, kind) {
+  // Оглавление под паролем: 7-Zip без пароля не прочтёт в таком архиве ничего.
+  // Считаем его зашифрованным и идём дальше — во внешнем архиве могут быть и
+  // открытые снимки, а если их нет, врач услышит «под паролем», а не «испорчен».
+  if (headerEncrypted(source, kind)) {
+    stats.encrypted++;
+    if (depth === 0) stats.topDone++;
+    return;
+  }
+
   const blob = source instanceof Uint8Array ? new Blob([source]) : source;
   const name = `archive.${kind === 'rar5' ? 'rar' : kind}`;
   let phase = performance.now();
   const entries = await listEntries(blob, name);
-  if (depth === 0) stats.entriesTotal = entries.size;
+  // Папки и пустые файлы в оглавлении есть, а до учёта не доходят: считаем
+  // только то, что даст файл, иначе полоса не дойдёт до конца.
+  if (depth === 0) stats.entriesTotal = [...entries.values()].filter((e) => e.size > 0).length;
+  const encrypted = [...entries.values()].filter((e) => e.encrypted).length;
+  stats.encrypted += encrypted;
   stats.listMs += performance.now() - phase;
   phase = performance.now();
 
@@ -666,10 +810,12 @@ async function readWith7z(source, depth, kind) {
   interceptOutput(first, entries, (path) => !entries.has(path), (path, result) => {
     const inner = account(result);
     if (inner) inMemory.push(inner);
-    else if (isArchive(result.kind)) laterPaths.push(path);
+    else if (isArchive(result.kind) && !entries.get(path)?.encrypted) laterPaths.push(path);
+    // Отложенный вложенный архив засчитается, когда будет разобран.
+    else if (depth === 0 && result.size > 0) stats.topDone++;
     tick();
   });
-  runSevenZip(first, ['x', `/in/${name}`, '-o/out', '-y']);
+  runSevenZip(first, ['x', `/in/${name}`, '-o/out', '-y'], { encrypted: encrypted > 0 });
   stats.extractMs += performance.now() - phase;
 
   for (const inner of inMemory.splice(0)) await readAny(inner, depth + 1);
@@ -685,6 +831,7 @@ async function readWith7z(source, depth, kind) {
     if (!inner) throw new Error('nested-missing');
     stats.nestedMs += performance.now() - phase;
     await readAny(inner, depth + 1);
+    if (depth === 0) stats.topDone++;
   }
 }
 
@@ -697,7 +844,15 @@ async function readAny(source, depth) {
   if (depth === 0) stats.format = kind;
   if (kind === 'zip') return readZip(source, depth);
   if (kind === 'dicom') {
-    account({ kind, size: source.size ?? source.length, bytes: null });
+    // Одиночный файл DICOM, выбранный вместо архива. Раньше он только
+    // считался и не читался — врач получал «снимки есть, но не прочитались».
+    // Для объёма это имеет смысл, когда файл многокадровый (enhanced CT).
+    const bytes = source instanceof Uint8Array
+      ? source
+      : new Uint8Array(new FileReaderSync().readAsArrayBuffer(source));
+    if (depth === 0) stats.entriesTotal = 1;
+    account({ kind, size: bytes.length, bytes });
+    if (depth === 0) stats.topDone++;
     return;
   }
   if (kind === 'unknown') throw new Error('unknown-format');
