@@ -197,6 +197,16 @@ body {
 
 .lead { margin: 0; color: var(--ink-dim); }
 
+/* Иконка приложения перед названием — на всех экранах, где стоит Vidi Web. */
+.brand, .viewer-brand { display: flex; align-items: center; gap: .36em; }
+.brand-icon {
+  flex: none;
+  width: 1.06em;
+  height: 1.06em;
+  border-radius: 22.5%;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
 /* Имя пациента стоит на месте заголовка, но длинное русское имя в размере
    логотипа занимает две строки и съедает экран телефона. */
 .wordmark.is-name { font-size: 26px; line-height: 1.2; }
@@ -407,6 +417,30 @@ body {
 .info-btn.is-warn { color: #F6D686; border-color: rgba(242, 193, 78, .45); background: rgba(242, 193, 78, .12); }
 
 .notes-patient { font-weight: 700; color: var(--ink); }
+
+/* Подсказка «?»: значок кнопки слева, что она делает — справа. */
+.help-card {
+  max-height: calc(100dvh - 32px - var(--safe-top) - var(--safe-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.help-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.help-row { display: grid; grid-template-columns: var(--tap) 1fr; gap: 12px; align-items: center; }
+.help-ico {
+  width: var(--tap);
+  height: var(--tap);
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--glass-line);
+  border-radius: 50%;
+  background: var(--glass-bg);
+  color: var(--ink);
+}
+.help-ico.is-danger { color: var(--status-danger); }
+.help-ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.help-row b { display: block; font-size: 15px; font-weight: 600; line-height: 1.3; }
+.help-text { display: block; margin-top: 2px; color: var(--ink-dim); font-size: 14px; line-height: 1.4; }
+.help-card .hint a { color: var(--signal); }
 
 .grid {
   flex: 1;

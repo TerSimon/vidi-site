@@ -9,7 +9,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0B0E14">
-<title>Vidi</title>
+<title>Vidi Web</title>
 <link rel="icon" href="/favicon.ico">
 <script>
 // Caddy открывает каталог как /app/; в адресной строке оставляем короткий /app.
@@ -23,7 +23,7 @@ if (location.pathname === '/app/') {
   }, { once: true });
 }
 </script>
-<link rel="stylesheet" href="app.css?v=0.9.3">
+<link rel="stylesheet" href="app.css?v=0.9.4">
 </head>
 <body>
 
@@ -31,7 +31,7 @@ if (location.pathname === '/app/') {
      форма входа у врача, который уже вошёл. -->
 <section class="screen" id="screen-boot" data-screen="boot">
   <div class="center-note">
-    <div class="wordmark">Vidi</div>
+    <div class="wordmark brand"><img class="brand-icon" src="icon.webp" alt="" width="36" height="36">Vidi Web</div>
     <p class="lead" id="boot-text">Проверяем доступ…</p>
   </div>
 </section>
@@ -40,7 +40,7 @@ if (location.pathname === '/app/') {
 <section class="screen" id="screen-login" data-screen="login" hidden>
   <div class="start">
     <header class="start-head">
-      <div class="wordmark">Vidi</div>
+      <div class="wordmark brand"><img class="brand-icon" src="icon.webp" alt="" width="36" height="36">Vidi Web</div>
       <p class="lead">Просмотр КТ в браузере</p>
     </header>
 
@@ -85,7 +85,7 @@ if (location.pathname === '/app/') {
 <section class="screen" id="screen-blocked" data-screen="blocked" hidden>
   <div class="start">
     <header class="start-head">
-      <div class="wordmark">Vidi</div>
+      <div class="wordmark brand"><img class="brand-icon" src="icon.webp" alt="" width="36" height="36">Vidi Web</div>
     </header>
 
     <div class="card">
@@ -104,7 +104,7 @@ if (location.pathname === '/app/') {
 <section class="screen" id="screen-start" data-screen="start" hidden>
   <div class="start">
     <header class="start-head">
-      <div class="wordmark">Vidi</div>
+      <div class="wordmark brand"><img class="brand-icon" src="icon.webp" alt="" width="36" height="36">Vidi Web</div>
       <p class="lead">Просмотр КТ в браузере</p>
     </header>
 
@@ -176,9 +176,13 @@ if (location.pathname === '/app/') {
     <button class="icon-btn" id="btn-back" type="button" aria-label="Назад">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
     </button>
-    <div class="viewer-brand" id="viewer-brand">Vidi</div>
+    <div class="viewer-brand" id="viewer-brand"><img class="brand-icon" src="icon.webp" alt="" width="24" height="24">Vidi Web</div>
+    <!-- «?» — что делают кнопки нижней панели. -->
+    <button class="info-btn" id="btn-help" type="button" aria-haspopup="dialog" aria-label="Что делают кнопки">
+      <span class="info-mark" aria-hidden="true">?</span>
+    </button>
     <!-- Имя пациента и сведения об исследовании открываются только по нажатию.
-         В заголовке просмотра всегда остаётся название Vidi для снимка экрана. -->
+         В заголовке просмотра всегда остаётся название Vidi Web для снимка экрана. -->
     <button class="info-btn" id="plate-badge" type="button" hidden aria-label="Сведения о пациенте и исследовании">
       <span class="info-mark" aria-hidden="true">!</span>
     </button>
@@ -305,6 +309,17 @@ if (location.pathname === '/app/') {
   </div>
 </div>
 
+<!-- Что делают кнопки нижней панели. Строки собирает app.js из самой панели:
+     значки берутся оттуда, чтобы подсказка не разошлась с кнопками. -->
+<div class="sheet" id="help-sheet" hidden role="dialog" aria-labelledby="help-title">
+  <div class="sheet-card help-card">
+    <div class="card-title" id="help-title">Управление</div>
+    <ul class="help-list" id="help-list"></ul>
+    <p class="hint">Без инструмента: касание — перекрестие, протяжка — срезы, щипок — увеличение. «Панорама» в&nbsp;углу четвёртой панели переключает 3D и&nbsp;панораму. <a href="/spravka.html" target="_blank" rel="noopener">Вся&nbsp;справка</a></p>
+    <button class="btn" id="help-close" type="button">Понятно</button>
+  </div>
+</div>
+
 <!-- Сообщение об ошибке. На экран выводится код; наружу ничего не отправляется. -->
 <div class="sheet" id="error-sheet" hidden role="alertdialog" aria-labelledby="error-title">
   <div class="sheet-card">
@@ -315,6 +330,6 @@ if (location.pathname === '/app/') {
   </div>
 </div>
 
-<script type="module" src="app.js?v=0.9.3"></script>
+<script type="module" src="app.js?v=0.9.4"></script>
 </body>
 </html>

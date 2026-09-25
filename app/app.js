@@ -12,8 +12,8 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, SEAT_PING_MS, moduleTicket, moduleURL,
-} from './auth.js?v=0.9.3';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.3';
+} from './auth.js?v=0.9.4';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.4';
 
 /*
   Код просмотра НЕ лежит рядом файлом. Браузерная версия считает снимок сама,
@@ -43,7 +43,7 @@ async function loadViewer() {
   return V;
 }
 
-const VERSION = '0.9.3';
+const VERSION = '0.9.4';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
 
@@ -728,7 +728,7 @@ function isReduced(built) {
 
 /*
   Сведения и имя пациента открываются круглым знаком справа. Заголовок
-  просмотра остаётся Vidi, в том числе на снимке экрана.
+  просмотра остаётся Vidi Web, в том числе на снимке экрана.
 */
 function showNotes(show) {
   $('notes-sheet').hidden = !show;
@@ -738,6 +738,57 @@ $('plate-badge').addEventListener('click', () => showNotes(true));
 $('notes-close').addEventListener('click', () => showNotes(false));
 $('notes-sheet').addEventListener('click', (e) => {
   if (e.target === $('notes-sheet')) showNotes(false);   // мимо карточки — закрыть
+});
+
+/*
+  Знак «?» — что делают кнопки нижней панели. Подписей под значками нет (семь
+  подписей в ряд на телефоне не помещаются), поэтому значок и его описание
+  стоят рядом здесь. Значок копируется из самой панели: поменяли кнопку —
+  подсказка поменялась вместе с ней. Кнопка без описания в подсказку не
+  попадает и видна в проверке app-archive.
+*/
+const TOOL_HELP = {
+  window: 'Яркость и контраст: ведите пальцем вправо — шире окно, вверх — светлее.',
+  slab: 'Толщина панорамы: 25 → 10 → 5 → 1,5 мм. Работает, когда в четвёртой панели панорама.',
+  ruler: 'Два касания — расстояние в миллиметрах.',
+  angle: 'Три касания — угол, вершина во второй точке.',
+  pencil: 'Рисуйте пальцем по срезу. Линия видна только на своём срезе.',
+  erase: 'Убрать измерения и линии. Нажмите дважды: первое нажатие взводит кнопку.',
+  reset: 'Вернуть увеличение, сдвиг, разворот и окно. Разметку не трогает.',
+};
+
+for (const btn of document.querySelectorAll('#toolbar .tool')) {
+  const text = TOOL_HELP[btn.dataset.tool];
+  if (!text) continue;
+  const row = document.createElement('li');
+  row.className = 'help-row';
+  const icon = document.createElement('span');
+  icon.className = 'help-ico' + (btn.classList.contains('tool-danger') ? ' is-danger' : '');
+  icon.append(btn.querySelector('svg').cloneNode(true));
+  const body = document.createElement('div');
+  const name = document.createElement('b');
+  name.textContent = btn.querySelector('.sr-only').textContent;
+  const desc = document.createElement('span');
+  desc.className = 'help-text';
+  desc.textContent = text;
+  body.append(name, desc);
+  row.append(icon, body);
+  $('help-list').append(row);
+}
+
+function showHelp(show) {
+  $('help-sheet').hidden = !show;
+}
+
+$('btn-help').addEventListener('click', () => showHelp(true));
+$('help-close').addEventListener('click', () => showHelp(false));
+$('help-sheet').addEventListener('click', (e) => {
+  if (e.target === $('help-sheet')) showHelp(false);
+});
+addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  showHelp(false);
+  showNotes(false);
 });
 
 function showPlate(series, built) {
@@ -776,6 +827,7 @@ $('open-cancel').addEventListener('click', () => {
 $('btn-back').addEventListener('click', () => {
   V?.clearVolume();
   showNotes(false);
+  showHelp(false);
   $('plate-badge').hidden = true;
   showScreen(foundStudy ? 'study' : 'start');
 });
@@ -795,6 +847,7 @@ const LOST_TEXT = 'Браузер выгрузил снимок из памят�
 function viewerLost(hadStudy) {
   if (!hadStudy || current !== 'viewer') return;
   showNotes(false);
+  showHelp(false);
   $('plate-badge').hidden = true;
   showScreen(foundStudy ? 'study' : 'start');
   showError('VOL-4', LOST_TEXT);
@@ -804,9 +857,9 @@ function viewerLost(hadStudy) {
 
 // Только номер выпуска: по нему видно, дошло ли обновление до телефона.
 // Название этапа здесь стояло со времён сборки и врачу ничего не говорило.
-$('version-login').textContent = 'Vidi ' + VERSION;
-$('version-start').textContent = 'Vidi ' + VERSION;
-$('version-blocked').textContent = 'Vidi ' + VERSION;
+$('version-login').textContent = 'Vidi Web ' + VERSION;
+$('version-start').textContent = 'Vidi Web ' + VERSION;
+$('version-blocked').textContent = 'Vidi Web ' + VERSION;
 
 async function boot() {
   showScreen('boot');
