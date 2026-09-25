@@ -424,6 +424,33 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
+.sheet-head {
+  position: sticky;
+  top: -18px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -18px -8px -6px 0;
+  padding: 10px 0 6px;
+  background: var(--surface-2);
+}
+.sheet-x {
+  appearance: none;
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+.sheet-x:hover { background: var(--tint-hover); color: var(--ink); }
+.sheet-x svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .help-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .help-row { display: grid; grid-template-columns: var(--tap) 1fr; gap: 12px; align-items: center; }
 .help-ico {

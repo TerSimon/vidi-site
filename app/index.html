@@ -23,7 +23,7 @@ if (location.pathname === '/app/') {
   }, { once: true });
 }
 </script>
-<link rel="stylesheet" href="app.css?v=0.9.4">
+<link rel="stylesheet" href="app.css?v=0.9.5">
 </head>
 <body>
 
@@ -313,7 +313,14 @@ if (location.pathname === '/app/') {
      значки берутся оттуда, чтобы подсказка не разошлась с кнопками. -->
 <div class="sheet" id="help-sheet" hidden role="dialog" aria-labelledby="help-title">
   <div class="sheet-card help-card">
-    <div class="card-title" id="help-title">Управление</div>
+    <!-- Шапка прилипает к верху: на низком экране список прокручивается, а
+         крестик остаётся под пальцем. -->
+    <div class="sheet-head">
+      <div class="card-title" id="help-title">Управление</div>
+      <button class="sheet-x" id="help-x" type="button" aria-label="Закрыть">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
     <ul class="help-list" id="help-list"></ul>
     <p class="hint">Без инструмента: касание — перекрестие, протяжка — срезы, щипок — увеличение. «Панорама» в&nbsp;углу четвёртой панели переключает 3D и&nbsp;панораму. <a href="/spravka.html" target="_blank" rel="noopener">Вся&nbsp;справка</a></p>
     <button class="btn" id="help-close" type="button">Понятно</button>
@@ -330,6 +337,6 @@ if (location.pathname === '/app/') {
   </div>
 </div>
 
-<script type="module" src="app.js?v=0.9.4"></script>
+<script type="module" src="app.js?v=0.9.5"></script>
 </body>
 </html>

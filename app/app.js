@@ -12,8 +12,8 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, SEAT_PING_MS, moduleTicket, moduleURL,
-} from './auth.js?v=0.9.4';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.4';
+} from './auth.js?v=0.9.5';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.5';
 
 /*
   Код просмотра НЕ лежит рядом файлом. Браузерная версия считает снимок сама,
@@ -43,7 +43,7 @@ async function loadViewer() {
   return V;
 }
 
-const VERSION = '0.9.4';
+const VERSION = '0.9.5';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
 
@@ -782,6 +782,7 @@ function showHelp(show) {
 
 $('btn-help').addEventListener('click', () => showHelp(true));
 $('help-close').addEventListener('click', () => showHelp(false));
+$('help-x').addEventListener('click', () => showHelp(false));
 $('help-sheet').addEventListener('click', (e) => {
   if (e.target === $('help-sheet')) showHelp(false);
 });
