@@ -537,6 +537,40 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
 .note a, .text-link, .faq-a a { color: var(--signal); text-decoration: underline; text-decoration-color: rgba(76,142,255,.45); text-underline-offset: 3px; }
 
 /* ============================================================
+   Vidi Web — телефон со скриншотом, стеклянные подписи поверх
+   ============================================================ */
+.web-points { list-style: none; margin: var(--space-section) 0 0; padding: 0; display: grid; gap: 20px; }
+.web-points li { display: grid; grid-template-columns: 36px 1fr; gap: 14px; align-items: start; }
+.web-points .ico { width: 36px; height: 36px; display: grid; place-items: center; border-radius: var(--radius-sm); background: var(--surface-3); border: 1px solid var(--line-strong); }
+.web-points .ico svg { width: 18px; height: 18px; color: var(--ink-dim); }
+.web-points h3 { margin: 7px 0 4px; }
+.web-points p { font-size: 14.5px; line-height: 1.55; }
+.web-chips { margin-top: var(--space-section); }
+.web-cta { display: flex; flex-wrap: wrap; gap: var(--space-compact); margin-top: 32px; }
+.web-fine { margin-top: 14px; }
+
+.web-visual { position: relative; max-width: 440px; width: 100%; margin: 0 auto; }
+.phone { position: relative; width: 290px; margin: 0 auto; padding: 9px; border-radius: 50px; background: linear-gradient(180deg, #1C2230, #0E1118); border: 1px solid var(--line-strong); box-shadow: var(--elevated); }
+/* Экран в пропорциях iPhone (1206×2622). Скриншоты сняты без строки состояния —
+   её место занимает полоса цвета строки состояния с «островом», чтобы он не
+   закрывал шапку приложения. */
+.phone-screen { position: relative; aspect-ratio: 1206 / 2622; border-radius: 41px; overflow: hidden; background: #0A0C13; }
+.phone-status { position: absolute; top: 0; left: 0; right: 0; height: 7.36%; display: grid; place-items: center; }
+.phone-island { width: 32%; height: 58%; border-radius: var(--radius-pill); background: #000; }
+.phone-shots { position: absolute; top: 7.36%; left: 0; right: 0; bottom: 0; }
+.phone-shots img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.03); transition: opacity .8s var(--ease), transform .8s var(--ease); }
+.phone-shots img.on { opacity: 1; transform: none; }
+.web-planes { margin-top: var(--space-default); }
+.web-planes .plane-chip[aria-pressed="true"] { background: rgba(255,255,255,.08); }
+.web-tag { position: absolute; z-index: 3; white-space: nowrap; }
+.phone-stage { position: relative; }
+.web-tag.t1 { left: 0; top: 34%; }
+.web-tag.t2 { right: 0; bottom: 30%; }
+
+.web-steps-title { margin: var(--space-block) 0 18px; font-size: 18px; }
+.web-note { max-width: none; }
+
+/* ============================================================
    Цена — карточки тарифа
    ============================================================ */
 .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; max-width: 940px; margin: 0 auto; }
@@ -695,6 +729,12 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
   .foot-grid { grid-template-columns: 1fr; gap: var(--space-default); }
   .howto li { padding: 20px 18px 20px 52px; }
   .howto li::before { left: 18px; }
+  .web-cta .btn { flex: 1 1 100%; }
+  .phone { width: 240px; border-radius: 44px; }
+  .phone-screen { border-radius: 36px; }
+  .web-tag.t1 { top: 38%; }
+  .web-tag.t2 { display: none; }
+  .web-planes { max-width: 300px; margin-left: auto; margin-right: auto; } /* 3 + 2, а не 4 + 1 */
 }
 
 /* ============================================================
@@ -707,7 +747,7 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
   .js .tree-list li, .js .tree .device-foot { opacity: 1; transform: none; }
   .js .tree-list li.study { background: var(--signal-tint); color: var(--signal-ink); }
   .tree-sweep { display: none; }
-  .story-frame img { transition: none; transform: none; }
+  .story-frame img, .phone-shots img { transition: none; transform: none; }
   .btn, .plan, .principle, .plane-chip { transition: none !important; }
   .faq-item::details-content { transition: none !important; }
 }

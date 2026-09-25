@@ -67,7 +67,7 @@
       "publisher": { "@id": "https://vidiviewer.ru/#org" },
       "offers": [
         { "@type": "Offer", "name": "Веб-демо", "price": "0", "priceCurrency": "RUB", "url": "https://vidiviewer.ru/demo/", "description": "Демонстрационное КЛКТ в браузере: три проекции, 3D и измерения" },
-        { "@type": "Offer", "name": "Подписка", "price": "599", "priceCurrency": "RUB", "description": "Подписка через Telegram-бот",
+        { "@type": "Offer", "name": "Подписка", "price": "599", "priceCurrency": "RUB", "description": "Подписка через Telegram-бот: приложение для Mac и Vidi Web в браузере",
           "priceSpecification": { "@type": "UnitPriceSpecification", "price": "599", "priceCurrency": "RUB", "billingDuration": "P1M" } }
       ]
     }
@@ -95,6 +95,9 @@
   <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5.5v13l10.5-6.5L8 5.5z"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol>
   <symbol id="i-drop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 5.5 13.5H12L11 21l7.5-10.5H12L13 3z"/></symbol>
+  <symbol id="i-cross" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 3v4.5M12 16.5V21M3 12h4.5M16.5 12H21"/></symbol>
+  <symbol id="i-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10a8 8 0 0 1 14.2-3.2L20 8.5M20 4v4.5h-4.5M19.5 14a8 8 0 0 1-14.2 3.2L4 15.5M4 20v-4.5h4.5"/></symbol>
 </svg>
 
 <header class="site-header">
@@ -108,9 +111,9 @@
       <a href="#archive">Архивы</a>
       <a href="#features">Возможности</a>
       <a href="#formats">Форматы</a>
+      <a href="#web" data-evt="web_nav">Vidi Web</a>
       <a href="#download">Цена</a>
       <a href="#faq">Вопросы</a>
-      <a href="/app" data-evt="mini_open_nav">Vidi mini</a>
     </nav>
     <a class="btn btn-primary nav-cta mac-only" href="https://storage.yandexcloud.net/videviewergmd/Vidi-1.4.dmg" download data-evt="download_nav"><svg aria-hidden="true"><use href="#i-apple"/></svg>Скачать для Mac</a>
     <a class="btn btn-primary nav-cta touch-only" href="demo/" data-evt="demo_open_nav"><svg aria-hidden="true"><use href="#i-play"/></svg>Открыть демо</a>
@@ -134,14 +137,16 @@
       <a class="btn btn-primary btn-lg" href="https://storage.yandexcloud.net/videviewergmd/Vidi-1.4.dmg" download data-evt="download_hero"><svg aria-hidden="true"><use href="#i-apple"/></svg>Скачать для&nbsp;Mac</a>
       <a class="btn btn-ghost btn-lg" href="demo/" data-evt="demo_open"><svg aria-hidden="true"><use href="#i-play"/></svg>Открыть демо</a>
       <a class="btn btn-tg btn-lg" href="https://t.me/vidivieverbot" data-evt="subscribe_hero"><svg aria-hidden="true"><use href="#i-tg"/></svg>Оформить подписку</a>
+      <a class="btn btn-ghost btn-lg" href="/app/" data-evt="web_open_hero"><svg aria-hidden="true"><use href="#i-phone"/></svg>Открыть Vidi Web</a>
     </div>
     <p class="hero-fine fine mac-only">macOS&nbsp;14+, Apple Silicon · работает по&nbsp;подписке</p>
 
     <div class="hero-cta touch-only">
       <a class="btn btn-primary btn-lg" href="demo/" data-evt="demo_open_mobile"><svg aria-hidden="true"><use href="#i-play"/></svg>Открыть демо</a>
+      <a class="btn btn-ghost btn-lg" href="/app/" data-evt="web_open_mobile"><svg aria-hidden="true"><use href="#i-phone"/></svg>Открыть Vidi Web</a>
       <a class="btn btn-ghost btn-lg" href="https://t.me/vidivieverbot" data-evt="tg_mobile"><svg aria-hidden="true"><use href="#i-tg"/></svg>Получить ссылку для Mac</a>
     </div>
-    <p class="hero-fine fine touch-only"><svg aria-hidden="true"><use href="#i-phone"/></svg><span>Веб-демо работает и&nbsp;на&nbsp;телефоне. Сам Vidi&nbsp;— приложение для&nbsp;Mac: ссылка на&nbsp;скачивание есть в&nbsp;Telegram-боте.</span></p>
+    <p class="hero-fine fine touch-only"><svg aria-hidden="true"><use href="#i-phone"/></svg><span>На&nbsp;телефоне работают веб-демо и&nbsp;<a class="text-link" href="#web">Vidi Web</a> по&nbsp;подписке. Приложение для&nbsp;Mac&nbsp;— ссылка на&nbsp;скачивание есть в&nbsp;Telegram-боте.</span></p>
 
     <!-- Сцена: пустое окно → архив перетаскивается → поиск → панели проявляются по очереди -->
     <div class="stage" id="stage">
@@ -385,13 +390,76 @@
   </div>
 </section>
 
+<!-- ================= VIDI WEB ================= -->
+<section class="section" id="web">
+  <div class="wrap">
+    <div class="split web">
+      <div>
+        <div class="eyebrow">Vidi Web</div>
+        <h2>КЛКТ теперь можно открыть на&nbsp;телефоне</h2>
+        <p class="lede">Vidi Web работает прямо в&nbsp;браузере&nbsp;— без установки приложения и&nbsp;ручной распаковки архива. Входит в&nbsp;ту&nbsp;же подписку, что и&nbsp;Vidi для&nbsp;Mac.</p>
+        <ul class="web-points">
+          <li><span class="ico" aria-hidden="true"><svg><use href="#i-zip"/></svg></span><div><h3>Архив&nbsp;— таким, каким его прислали</h3><p>ZIP, RAR или 7z открываются без распаковки: Vidi сам найдёт исследование внутри, даже во&nbsp;вложенном архиве.</p></div></li>
+          <li><span class="ico" aria-hidden="true"><svg><use href="#i-bolt"/></svg></span><div><h3>Без загрузки на&nbsp;сервер</h3><p>Архив разбирается прямо на&nbsp;телефоне: ZIP около 600&nbsp;МБ распаковывается примерно за&nbsp;5&nbsp;секунд. Снимок остаётся на&nbsp;устройстве.</p></div></li>
+          <li><span class="ico" aria-hidden="true"><svg><use href="#i-cross"/></svg></span><div><h3>Срезы&nbsp;— пальцами</h3><p>Касание переносит перекрестие, протяжка листает срезы, щипок увеличивает изображение.</p></div></li>
+          <li><span class="ico" aria-hidden="true"><svg><use href="#i-sync"/></svg></span><div><h3>Mac и&nbsp;телефон&nbsp;— в&nbsp;одной подписке за&nbsp;599&nbsp;₽</h3><p>Вход по&nbsp;тому&nbsp;же email и&nbsp;коду, что и&nbsp;в&nbsp;приложении. Vidi открыт в&nbsp;одном месте за&nbsp;раз: работу с&nbsp;Mac можно перенести на&nbsp;телефон.</p></div></li>
+        </ul>
+        <div class="chips web-chips" aria-label="Что доступно в Vidi Web">
+          <span class="chip">Три проекции</span><span class="chip">3D</span><span class="chip">Панорама</span><span class="chip">Разворот срезов</span><span class="chip">Линейка</span><span class="chip">Угол</span><span class="chip">Окно</span><span class="chip">Толщина слоя</span>
+        </div>
+        <p class="note"><svg aria-hidden="true"><use href="#i-info"/></svg><span>Разметка канала, импланты и&nbsp;PDF-отчёты&nbsp;— в&nbsp;приложении для&nbsp;Mac. Жесты и&nbsp;измерения описаны в&nbsp;<a href="/spravka.html">справке Vidi Web</a>.</span></p>
+        <div class="web-cta">
+          <a class="btn btn-primary btn-lg" href="/app/" data-evt="web_open"><svg aria-hidden="true"><use href="#i-phone"/></svg>Открыть Vidi Web</a>
+          <a class="btn btn-ghost btn-lg" href="demo/" data-evt="demo_open_web"><svg aria-hidden="true"><use href="#i-play"/></svg>Демо без регистрации</a>
+        </div>
+        <p class="fine web-fine">Проверено на&nbsp;iPhone и&nbsp;Mac. Для входа нужен интернет.</p>
+      </div>
+
+      <!-- Скриншоты с iPhone сменяются сами; чип плоскости под телефоном выбирает кадр -->
+      <div class="web-visual" id="web-shots">
+        <div class="phone-stage">
+        <div class="phone">
+          <div class="phone-screen">
+            <span class="phone-status" aria-hidden="true"><span class="phone-island"></span></span>
+            <div class="phone-shots">
+              <img class="on" src="assets/web-axial.webp" alt="Vidi Web на iPhone: аксиальный срез КЛКТ с перекрестием" width="720" height="1450" loading="lazy" decoding="async" />
+              <img src="assets/web-sagittal.webp" alt="Vidi Web на iPhone: сагиттальный срез с развёрнутыми осями" width="720" height="1450" loading="lazy" decoding="async" />
+              <img src="assets/web-coronal.webp" alt="Vidi Web на iPhone: корональный срез через зуб" width="720" height="1450" loading="lazy" decoding="async" />
+              <img src="assets/web-3d.webp" alt="Vidi Web на iPhone: объёмная 3D-реконструкция черепа" width="720" height="1450" loading="lazy" decoding="async" />
+              <img src="assets/web-pano.webp" alt="Vidi Web на iPhone: панорама вдоль зубной дуги" width="720" height="1450" loading="lazy" decoding="async" />
+            </div>
+          </div>
+        </div>
+        <span class="chip-float web-tag t1" aria-hidden="true"><svg><use href="#i-zip"/></svg>ZIP · RAR · 7z</span>
+        <span class="chip-float web-tag t2" aria-hidden="true"><svg><use href="#i-lock"/></svg>Снимок остаётся на&nbsp;устройстве</span>
+        </div>
+        <div class="planes web-planes" role="group" aria-label="Выбрать скриншот Vidi Web">
+          <button type="button" class="plane-chip" aria-pressed="true"><span class="dot axial"></span>Axial</button>
+          <button type="button" class="plane-chip" aria-pressed="false"><span class="dot sagittal"></span>Sagittal</button>
+          <button type="button" class="plane-chip" aria-pressed="false"><span class="dot coronal"></span>Coronal</button>
+          <button type="button" class="plane-chip" aria-pressed="false"><span class="dot neutral"></span>3D</button>
+          <button type="button" class="plane-chip" aria-pressed="false"><span class="dot neutral"></span>Панорама</button>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="web-steps-title">Как открыть КЛКТ на&nbsp;телефоне</h3>
+    <ol class="principles">
+      <li class="principle"><span class="num">01</span><h3>Сохраните архив в&nbsp;«Файлы»</h3><p>Из Telegram или почты: «Поделиться» → «Сохранить в&nbsp;Файлы».</p></li>
+      <li class="principle"><span class="num">02</span><h3>Войдите в&nbsp;Vidi Web</h3><p>Откройте <a class="text-link" href="/app/" data-evt="web_open_steps">vidiviewer.ru/app</a> и&nbsp;введите тот&nbsp;же email и&nbsp;код, что и&nbsp;в&nbsp;Vidi для&nbsp;Mac.</p></li>
+      <li class="principle"><span class="num">03</span><h3>Нажмите «Открыть КТ»</h3><p>Выберите архив&nbsp;— исследование откроется в&nbsp;трёх проекциях и&nbsp;3D.</p></li>
+    </ol>
+    <p class="note web-note"><svg aria-hidden="true"><use href="#i-info"/></svg><span>Открывайте Vidi Web в&nbsp;обычном окне браузера, не&nbsp;в&nbsp;приватном,&nbsp;— так браузер сохранит вход.</span></p>
+  </div>
+</section>
+
 <!-- ================= ЦЕНА И СКАЧИВАНИЕ ================= -->
 <section class="section" id="download">
   <div class="wrap">
     <div class="section-head center">
       <div class="eyebrow">Цена</div>
       <h2>Начните с&nbsp;бесплатного демо</h2>
-      <p class="lede">Веб-демо показывает, как Vidi работает с&nbsp;КЛКТ, прямо в&nbsp;браузере. Свои снимки, панорама, канал и&nbsp;импланты&nbsp;— в&nbsp;приложении для&nbsp;Mac по&nbsp;подписке.</p>
+      <p class="lede">Веб-демо показывает, как Vidi работает с&nbsp;КЛКТ, прямо в&nbsp;браузере. Свои снимки&nbsp;— по&nbsp;подписке: в&nbsp;приложении для&nbsp;Mac и&nbsp;в&nbsp;Vidi Web на&nbsp;телефоне.</p>
     </div>
     <div class="plans">
       <div class="plan card card-accent">
@@ -415,7 +483,7 @@
         <p>Полный доступ: открывайте любые свои снимки.</p>
         <ul>
           <li><svg aria-hidden="true"><use href="#i-check"/></svg>Оформление и&nbsp;оплата в&nbsp;Telegram-боте</li>
-          <li><svg aria-hidden="true"><use href="#i-check"/></svg>Одна подписка&nbsp;— один Mac</li>
+          <li><svg aria-hidden="true"><use href="#i-check"/></svg>Приложение для&nbsp;Mac и&nbsp;Vidi Web на&nbsp;телефоне&nbsp;— без доплаты</li>
           <li><svg aria-hidden="true"><use href="#i-check"/></svg>При отмене подписки доступ сохраняется до&nbsp;конца периода</li>
         </ul>
         <div class="plan-cta">
@@ -489,7 +557,11 @@
       </details>
       <details class="faq-item">
         <summary>Сколько устройств можно использовать по одной подписке?</summary>
-        <div class="faq-a">Одна подписка — одно устройство. Чтобы сменить компьютер, напишите в поддержку (<a href="https://t.me/ter_simon">@ter_simon</a> / <a href="mailto:vidiviewer@yandex.ru">vidiviewer@yandex.ru</a>) — привязку сбросят.</div>
+        <div class="faq-a">К подписке привязываются один Mac и один браузер для Vidi Web. Vidi открыт в одном месте за раз: если он уже работает на Mac, телефон предложит перенести работу сюда. Сменить устройство можно кнопкой сброса в Telegram-боте — не больше двух раз за 30 дней для каждого вида устройства.</div>
+      </details>
+      <details class="faq-item">
+        <summary>Можно ли открыть КЛКТ на телефоне?</summary>
+        <div class="faq-a">Да, в <a href="#web">Vidi Web</a>: откройте <a href="/app/">vidiviewer.ru/app</a> и войдите с тем же email и кодом, что и в приложении для Mac, — отдельная подписка не нужна. Доступны три проекции, 3D, панорама, разворот срезов, линейка, угол, окно и толщина слоя. Разметка канала, импланты и PDF-отчёты — в приложении для Mac. Проверено на iPhone и Mac.</div>
       </details>
       <details class="faq-item">
         <summary>Как отменить подписку?</summary>
@@ -522,6 +594,7 @@
       <a class="btn btn-ghost btn-lg mac-only" href="demo/" data-evt="demo_open_final"><svg aria-hidden="true"><use href="#i-play"/></svg>Открыть демо</a>
       <a class="btn btn-primary btn-lg touch-only" href="demo/" data-evt="demo_open_final"><svg aria-hidden="true"><use href="#i-play"/></svg>Открыть демо</a>
       <a class="btn btn-ghost btn-lg" href="https://t.me/vidivieverbot" data-evt="subscribe"><svg aria-hidden="true"><use href="#i-tg"/></svg>Оформить подписку</a>
+      <a class="btn btn-ghost btn-lg" href="/app/" data-evt="web_open_final"><svg aria-hidden="true"><use href="#i-phone"/></svg>Открыть Vidi Web</a>
     </div>
     <p class="hero-fine fine mac-only">macOS&nbsp;14+, Apple Silicon</p>
   </div>
@@ -544,6 +617,7 @@
         <h2 class="foot-h">Продукт</h2>
         <a href="#features">Возможности</a>
         <a href="#formats">Форматы и требования</a>
+        <a href="#web">Vidi Web на телефоне</a>
         <a href="#download">Цена и скачивание</a>
       </div>
       <div>

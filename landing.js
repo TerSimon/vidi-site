@@ -168,6 +168,45 @@
     update();
   }
 
+  // ---- Vidi Web: скриншоты с телефона сменяются сами, чип плоскости выбирает кадр ----
+  // Смена идёт, только пока телефон в кадре; под курсором и при «Уменьшить движение» — стоит.
+  const webShots = document.getElementById("web-shots");
+  if (webShots) {
+    const SHOT_MS = 3200;
+    const imgs = Array.from(webShots.querySelectorAll(".phone-shots img"));
+    const chips = Array.from(webShots.querySelectorAll(".web-planes button"));
+    let idx = 0;
+    let timer = 0;
+    let inView = !hasIO;
+    let hovered = false;
+
+    const show = (i) => {
+      idx = i;
+      imgs.forEach((img, k) => img.classList.toggle("on", k === i));
+      chips.forEach((chip, k) => chip.setAttribute("aria-pressed", String(k === i)));
+    };
+    const stop = () => { clearInterval(timer); timer = 0; };
+    const start = () => {
+      stop();
+      if (reduceMotion || !inView || hovered) return;
+      timer = setInterval(() => show((idx + 1) % imgs.length), SHOT_MS);
+    };
+
+    chips.forEach((chip, k) => chip.addEventListener("click", () => { show(k); start(); }));
+    const phone = webShots.querySelector(".phone");
+    phone.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") { hovered = true; stop(); } });
+    phone.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") { hovered = false; start(); } });
+
+    if (hasIO) {
+      new IntersectionObserver((entries) => {
+        inView = entries.some((en) => en.isIntersecting);
+        start();
+      }, { threshold: 0.3 }).observe(phone);
+    } else {
+      start();
+    }
+  }
+
   // ---- Карточки тарифа: подсветка следует за курсором (как plan-card в дизайн-системе) ----
   if (window.matchMedia("(pointer: fine)").matches) {
     document.querySelectorAll(".plan").forEach((card) => {
