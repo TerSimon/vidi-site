@@ -29,7 +29,7 @@
 <!-- Шрифты дизайн-системы грузятся без блокировки отрисовки; класс .js включает сцену в hero до первого кадра -->
 <script>document.documentElement.classList.add("js");(function(){var l=document.createElement("link");l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap";document.head.appendChild(l);setTimeout(function(){if(!window.__vidiReady)document.documentElement.classList.add("no-scene")},6000)})();</script>
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" /></noscript>
-<link rel="stylesheet" href="styles.css?v=20260925" />
+<link rel="stylesheet" href="styles.css?v=20260925-2" />
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -417,7 +417,6 @@
 
       <!-- Скриншоты с iPhone сменяются сами; чип плоскости под телефоном выбирает кадр -->
       <div class="web-visual" id="web-shots">
-        <div class="phone-stage">
         <div class="phone">
           <div class="phone-screen">
             <span class="phone-status" aria-hidden="true"><span class="phone-island"></span></span>
@@ -429,9 +428,6 @@
               <img src="assets/web-pano.webp" alt="Vidi Web на iPhone: панорама вдоль зубной дуги" width="720" height="1450" loading="lazy" decoding="async" />
             </div>
           </div>
-        </div>
-        <span class="chip-float web-tag t1" aria-hidden="true"><svg><use href="#i-zip"/></svg>ZIP · RAR · 7z</span>
-        <span class="chip-float web-tag t2" aria-hidden="true"><svg><use href="#i-lock"/></svg>Снимок остаётся на&nbsp;устройстве</span>
         </div>
         <div class="planes web-planes" role="group" aria-label="Выбрать скриншот Vidi Web">
           <button type="button" class="plane-chip" aria-pressed="true"><span class="dot axial"></span>Axial</button>

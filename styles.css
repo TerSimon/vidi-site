@@ -562,10 +562,6 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
 .phone-shots img.on { opacity: 1; transform: none; }
 .web-planes { margin-top: var(--space-default); }
 .web-planes .plane-chip[aria-pressed="true"] { background: rgba(255,255,255,.08); }
-.web-tag { position: absolute; z-index: 3; white-space: nowrap; }
-.phone-stage { position: relative; }
-.web-tag.t1 { left: 0; top: 34%; }
-.web-tag.t2 { right: 0; bottom: 30%; }
 
 .web-steps-title { margin: var(--space-block) 0 18px; font-size: 18px; }
 .web-note { max-width: none; }
@@ -732,8 +728,6 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
   .web-cta .btn { flex: 1 1 100%; }
   .phone { width: 240px; border-radius: 44px; }
   .phone-screen { border-radius: 36px; }
-  .web-tag.t1 { top: 38%; }
-  .web-tag.t2 { display: none; }
   .web-planes { max-width: 300px; margin-left: auto; margin-right: auto; } /* 3 + 2, а не 4 + 1 */
 }
 
