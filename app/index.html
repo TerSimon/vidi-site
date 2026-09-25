@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0B0E14">
 <title>Vidi</title>
 <link rel="icon" href="/favicon.ico">
-<link rel="stylesheet" href="app.css?v=0.9.2">
+<link rel="stylesheet" href="app.css?v=0.9.3">
 </head>
 <body>
 
@@ -164,8 +164,12 @@
     <button class="icon-btn" id="btn-back" type="button" aria-label="Назад">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
     </button>
-    <div class="patient" id="patient">Исследование не открыто</div>
-  
+    <div class="viewer-brand" id="viewer-brand">Vidi</div>
+    <!-- Имя пациента и сведения об исследовании открываются только по нажатию.
+         В заголовке просмотра всегда остаётся название Vidi для снимка экрана. -->
+    <button class="info-btn" id="plate-badge" type="button" hidden aria-label="Сведения о пациенте и исследовании">
+      <span class="info-mark" aria-hidden="true">!</span>
+    </button>
   </header>
 
   <!-- Переключатель панелей: виден только на узком экране. -->
@@ -176,12 +180,6 @@
     <button class="plane-tab" role="tab" type="button" data-plane="coronal" aria-selected="false" style="--plane: var(--plane-coronal)"><span class="dot"></span>Coronal</button>
     <button class="plane-tab" role="tab" type="button" data-plane="volume" aria-selected="false" style="--plane: var(--plane-neutral)"><span class="dot"></span>3D</button>
     </div>
-    <!-- Что именно открыто: серия, размер точки, оговорки. Знаком, а не
-         строкой — строка отнимала место у имени пациента и всё равно
-         обрезалась. -->
-    <button class="info-btn" id="plate-badge" type="button" hidden aria-label="Что открыто">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.6v.6"/></svg>
-    </button>
   </nav>
 
   <main class="grid" id="grid">
@@ -255,6 +253,10 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19h15M5 19L17 6"/><path d="M9 19a6 6 0 00.9-3"/></svg>
       <span class="sr-only">Угол</span>
     </button>
+    <button class="tool" type="button" disabled data-tool="pencil" aria-label="Карандаш">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4.5-1 10.3-10.3-3.5-3.5L5 15.5 4 20zM13.5 6.5L17 10"/></svg>
+      <span class="sr-only">Карандаш</span>
+    </button>
     <!-- Отдельно от «Сброса»: убрать разметку и вернуть вид — разные действия,
          и на Mac они тоже разведены (там удаление ещё и спрашивает). -->
     <button class="tool tool-danger" type="button" disabled data-tool="erase" aria-label="Стереть разметку">
@@ -280,11 +282,12 @@
   </div>
 </div>
 
-<!-- Чем именно врач смотрит: серия, размер, оговорки. Раньше этот текст висел
-     поверх снимка и закрывал половину экрана телефона. -->
+<!-- Имя пациента и сведения об исследовании скрыты за круглым знаком «!»,
+     чтобы они не попадали на снимок экрана просмотра. -->
 <div class="sheet" id="notes-sheet" hidden role="dialog" aria-labelledby="notes-title">
   <div class="sheet-card">
-    <div class="card-title" id="notes-title">Что открыто</div>
+    <div class="card-title" id="notes-title">Пациент и исследование</div>
+    <p class="notice notes-patient" id="notes-patient"></p>
     <p class="notice" id="notes-text"></p>
     <button class="btn" id="notes-close" type="button">Понятно</button>
   </div>
@@ -300,6 +303,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=0.9.2"></script>
+<script type="module" src="app.js?v=0.9.3"></script>
 </body>
 </html>

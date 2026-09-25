@@ -304,19 +304,18 @@ body {
 .icon-btn:hover { background: var(--tint-hover); }
 .icon-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
-.patient {
-  flex: 1 1 50%;
+.viewer-brand {
+  flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -.02em;
 }
 
 /*
-  Правый край верхней строки. Раньше он был flex:none, то есть не сжимался
-  вовсе: метка с размером точки забирала место, а имя пациента сжималось до
-  нуля и пропадало. Теперь сжимаются оба, и имени гарантирована половина.
+  Служебные элементы правого края верхней строки. Название Vidi остаётся
+  видимым в левой части даже на узком экране.
 */
 .topbar-right {
   display: flex;
@@ -385,15 +384,14 @@ body {
 .plane-tab.is-active { background: var(--tint-active); color: var(--ink); }
 
 /*
-  Знак «что открыто». Раньше это была строка с размером точки рядом с именем
-  пациента: она обрезалась до «0…» и отнимала у имени место. Теперь — круглый
-  знак в правом углу; жёлтый, только когда есть о чём предупредить.
+  Круглый знак «!»: имя пациента и сведения открываются нажатием. Жёлтый —
+  только когда есть о чём предупредить.
 */
 .info-btn {
-  position: absolute;
-  right: calc(12px + var(--safe-right));
-  width: 34px;
-  height: 34px;
+  appearance: none;
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
   display: grid;
   place-items: center;
   border: 1px solid var(--glass-line);
@@ -404,9 +402,11 @@ body {
   color: var(--ink-dim);
   cursor: pointer;
 }
-.info-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.info-mark { font-family: var(--font-display); font-size: 19px; font-weight: 800; line-height: 1; }
 .info-btn:hover { color: var(--ink); }
 .info-btn.is-warn { color: #F6D686; border-color: rgba(242, 193, 78, .45); background: rgba(242, 193, 78, .12); }
+
+.notes-patient { font-weight: 700; color: var(--ink); }
 
 .grid {
   flex: 1;
@@ -550,12 +550,16 @@ body {
   padding: 8px calc(8px + var(--safe-right)) calc(8px + var(--safe-bottom)) calc(8px + var(--safe-left));
 }
 
-/* Пилюля тулбара. Подписей под значками нет — как в демо: шесть подписей в
+/* Пилюля тулбара. Подписей под значками нет — как в демо: семь подписей в
    ряд на телефоне теснятся и всё равно обрезаются. */
 .toolbar-pill {
   display: flex;
   align-items: center;
   gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
   padding: 4px;
   border-radius: 999px;
   background: var(--glass-bg);
@@ -564,10 +568,12 @@ body {
   border: 1px solid var(--glass-line);
   box-shadow: var(--glass-shadow);
 }
+.toolbar-pill::-webkit-scrollbar { display: none; }
 
 .tool {
   appearance: none;
   position: relative;
+  flex: none;
   width: var(--tap);
   height: var(--tap);
   display: grid;
@@ -793,8 +799,8 @@ code {
 /* ─── Узкий экран: одна панель + переключатель ──────────────────────────── */
 
 @media (min-width: 721px) {
-  /* Четыре панели видны сразу — переключать нечего, остаётся только знак. */
-  .planes-pill { display: none; }
+  /* Четыре панели видны сразу — переключатель проекций не нужен. */
+  .planes { display: none; }
 }
 
 @media (max-width: 720px) {
@@ -811,14 +817,12 @@ code {
   .pane.is-active { display: block; }
 }
 
-/* Шесть кнопок в ряд на телефоне: подписи под значками сжимаются, но не
+/* Семь кнопок в ряд на телефоне: подписи под значками сжимаются, но не
    переносятся — перенос поднимает панель и съедает высоту снимка. */
-/* Узкий телефон: шесть круглых кнопок и четыре вкладки должны уместиться в
-   один ряд. Перенос пилюли на вторую строку съел бы высоту снимка. */
+/* На узком телефоне пилюля прокручивается по горизонтали, сохраняя цели 44px. */
 @media (max-width: 420px) {
   .toolbar, .planes { padding-left: calc(6px + var(--safe-left)); padding-right: calc(6px + var(--safe-right)); }
-  /* Кнопку не мельчим: 44px — это палец. Шесть кругов с отступами занимают
-     294px, и на 390px они помещаются без сжатия. */
+  /* Кнопку не мельчим: 44px — это палец. Семь кругов на 390px помещаются. */
   .plane-tab { padding: 0 9px; font-size: 12px; gap: 5px; }
   .view-btn { padding: 4px 9px; font-size: 11px; }
 }

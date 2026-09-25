@@ -12,8 +12,8 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, SEAT_PING_MS, moduleTicket, moduleURL,
-} from './auth.js?v=0.9.2';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.2';
+} from './auth.js?v=0.9.3';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.3';
 
 /*
   Код просмотра НЕ лежит рядом файлом. Браузерная версия считает снимок сама,
@@ -43,7 +43,7 @@ async function loadViewer() {
   return V;
 }
 
-const VERSION = '0.9.2';
+const VERSION = '0.9.3';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
 
@@ -696,7 +696,6 @@ async function runVolume(file, series) {
     });
     showScreen('viewer');
     V.selectPlane('axial');
-    $('patient').textContent = personName(foundStudy.study.patientName);
     showPlate(series, built);
   } catch (e) {
     if (e instanceof ArchiveCancelled) return;
@@ -728,12 +727,8 @@ function isReduced(built) {
 }
 
 /*
-  Оговорка живёт меткой в верхней панели, а не подписью поверх снимка.
-
-  Подпись стояла посреди изображения и на телефоне закрывала половину экрана,
-  а после неё на снимке оставалась жёлтая метка — и мешала уже она. Теперь
-  метка стоит в строке с именем пациента, снимка не касается вовсе, а полный
-  текст открывается окном по нажатию и закрывается кнопкой.
+  Сведения и имя пациента открываются круглым знаком справа. Заголовок
+  просмотра остаётся Vidi, в том числе на снимке экрана.
 */
 function showNotes(show) {
   $('notes-sheet').hidden = !show;
@@ -746,6 +741,7 @@ $('notes-sheet').addEventListener('click', (e) => {
 });
 
 function showPlate(series, built) {
+  $('notes-patient').textContent = personName(foundStudy?.study?.patientName);
   const size = built.geometry.mm
     ? ', точка ' + built.geometry.voxel.i.toFixed(2) + '×' +
       built.geometry.voxel.j.toFixed(2) + '×' + built.geometry.voxel.k.toFixed(2) + ' мм'
@@ -763,7 +759,7 @@ function showPlate(series, built) {
       : 'точка ' + built.geometry.voxel.i.toFixed(2) + ' мм')
     : 'без масштаба';
   badge.title = short;
-  badge.setAttribute('aria-label', 'Что открыто: ' + short);
+  badge.setAttribute('aria-label', 'Сведения о пациенте и исследовании: ' + short);
   badge.dataset.short = short;
   // Жёлтым — только когда есть о чём предупредить. Постоянный жёлтый глаз
   // перестаёт замечать.
