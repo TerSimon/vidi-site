@@ -11,6 +11,18 @@
 <meta name="theme-color" content="#0B0E14">
 <title>Vidi</title>
 <link rel="icon" href="/favicon.ico">
+<script>
+// Caddy открывает каталог как /app/; в адресной строке оставляем короткий /app.
+// База сохраняет правильные пути к ресурсам после смены видимого адреса.
+if (location.pathname === '/app/') {
+  const base = document.createElement('base');
+  base.href = '/app/';
+  document.head.append(base);
+  addEventListener('DOMContentLoaded', () => {
+    history.replaceState(history.state, '', '/app');
+  }, { once: true });
+}
+</script>
 <link rel="stylesheet" href="app.css?v=0.9.3">
 </head>
 <body>
