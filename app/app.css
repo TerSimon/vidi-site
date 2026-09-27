@@ -768,7 +768,10 @@ body {
 
 /* ─── Распаковка ────────────────────────────────────────────────────────── */
 
-.open-card { width: min(92vw, 380px); text-align: left; }
+/* Ширина — за вычетом полей .center-note (2 × 24). При 92vw карточка с полями
+   была шире экрана уже 413 pt, auto-поля схлопывались, и она стояла на 8 pt
+   правее центра (iPhone 16 Pro, 402 pt). */
+.open-card { width: min(calc(100vw - 48px), 380px); text-align: left; }
 
 .bar {
   height: 6px;
