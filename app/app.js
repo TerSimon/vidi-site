@@ -12,8 +12,8 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, SEAT_PING_MS, moduleTicket, moduleURL,
-} from './auth.js?v=0.9.6';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.6';
+} from './auth.js?v=0.9.7';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.7';
 
 /*
   Код просмотра НЕ лежит рядом файлом. Браузерная версия считает снимок сама,
@@ -43,7 +43,7 @@ async function loadViewer() {
   return V;
 }
 
-const VERSION = '0.9.6';
+const VERSION = '0.9.7';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
 
@@ -777,6 +777,12 @@ for (const btn of document.querySelectorAll('#toolbar .tool')) {
 }
 
 function showHelp(show) {
+  const gestures = $('help-gestures');
+  if (show && gestures) {
+    gestures.textContent = matchMedia('(hover: hover) and (pointer: fine)').matches
+      ? 'Без инструмента: левая кнопка ставит и перемещает перекрестие; цветные точки поворачивают плоскости. Колесо — срезы; Ctrl/⌘ + колесо — увеличение к курсору. Средняя кнопка или Shift + левая — сдвиг снимка; правая — яркость и контраст.'
+      : 'Без инструмента: касание — перекрестие, протяжка — срезы, щипок — увеличение.';
+  }
   $('help-sheet').hidden = !show;
 }
 
