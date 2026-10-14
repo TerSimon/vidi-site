@@ -4,13 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Как открыть КЛКТ на Mac: архив ZIP, RAR или папка DICOM — Vidi</title>
-<meta name="description" content="Клиника прислала КЛКТ в архиве, а на Mac он не открывается? Что обычно лежит внутри архива и как открыть исследование на Mac без Windows и Parallels." />
+<meta name="description" content="Как открыть DICOM-архив с КЛКТ на Mac для ознакомительной визуализации, демонстрации и обучения: ZIP, RAR, папка DICOM, проекции и 3D." />
 <link rel="canonical" href="https://vidiviewer.ru/kak-otkryt-klkt-na-mac/" />
 <meta property="og:type" content="article" />
 <meta property="og:site_name" content="Vidi" />
 <meta property="og:locale" content="ru_RU" />
 <meta property="og:title" content="Как открыть КЛКТ на Mac" />
-<meta property="og:description" content="Что обычно лежит в архиве с КЛКТ и как открыть исследование на Mac без Windows и Parallels." />
+<meta property="og:description" content="Что лежит в DICOM-архиве с КЛКТ и как открыть его на Mac для ознакомления, демонстрации и обучения." />
 <meta property="og:url" content="https://vidiviewer.ru/kak-otkryt-klkt-na-mac/" />
 <meta property="og:image" content="https://vidiviewer.ru/assets/og-image.png" />
 <meta property="og:image:width" content="1200" />
@@ -28,11 +28,11 @@
     {
       "@type": "Article",
       "headline": "Как открыть КЛКТ на Mac",
-      "description": "Что обычно лежит в архиве с КЛКТ и как открыть исследование на Mac без Windows и Parallels.",
+      "description": "Что лежит в DICOM-архиве с КЛКТ и как открыть его на Mac для ознакомления, демонстрации и обучения.",
       "image": "https://vidiviewer.ru/assets/app-main.webp",
       "inLanguage": "ru",
       "datePublished": "2026-09-13",
-      "dateModified": "2026-09-13",
+      "dateModified": "2026-10-14",
       "mainEntityOfPage": "https://vidiviewer.ru/kak-otkryt-klkt-na-mac/",
       "author": { "@type": "Organization", "name": "Vidi", "url": "https://vidiviewer.ru/" },
       "publisher": { "@id": "https://vidiviewer.ru/#org" }
@@ -94,7 +94,8 @@
     <article class="article">
       <div class="eyebrow">Гайд</div>
       <h1>Как открыть КЛКТ на&nbsp;Mac</h1>
-      <p class="lead">Вам прислали КЛКТ — ZIP- или RAR-архив, папку с сотней файлов без расширений или экспорт с томографа. На Windows для этого обычно есть программа производителя, а на Mac такой архив чаще всего просто не открывается. Разбираем, что лежит внутри и как открыть исследование на Mac.</p>
+      <p class="lead">КЛКТ может быть сохранено как ZIP- или RAR-архив, папка с сотней файлов без расширений или экспорт с томографа. Разбираем, что лежит внутри и как открыть DICOM-данные на Mac для ознакомления, демонстрации и обучения.</p>
+      <div class="callout"><svg aria-hidden="true"><use href="#i-alert"/></svg><p>Vidi предназначена для ознакомительной визуализации DICOM-данных, демонстрации и обучения. Не предназначена для постановки диагноза, планирования лечения или принятия клинических решений. Измерения и виртуальные модели используются только для демонстрации.</p></div>
 
       <h2>Что обычно присылают</h2>
       <ul>
@@ -115,7 +116,7 @@
       <ol class="howto">
         <li><strong>Установить Vidi</strong>Нужен Mac на Apple Silicon (M1 и новее) и macOS 14.0+; свои снимки открываются по подписке. Интерфейс можно заранее попробовать в <a class="text-link" href="/demo/">веб-демо</a> прямо в браузере.</li>
         <li><strong>Перетащить архив или папку в окно Vidi</strong>Распаковывать ничего не нужно: Vidi сам находит исследование внутри, включая вложенные архивы.</li>
-        <li><strong>Работать со снимком</strong>Открываются три проекции MPR и 3D. Дальше — панорама, измерения, разметка канала и планирование имплантации.</li>
+        <li><strong>Ознакомиться с изображением</strong>Открываются три проекции MPR и 3D. Доступны панорама, геометрические измерения, демонстрационная разметка канала и виртуальные модели имплантов.</li>
       </ol>
 
       <figure>
@@ -141,8 +142,8 @@
           <div class="faq-a">Нет. Vidi работает только на Apple Silicon (M1 и новее) с macOS 14.0 или новее. Версий под Intel-Mac и Windows нет.</div>
         </details>
         <details class="faq-item">
-          <summary>Можно ли использовать Vidi для постановки диагноза?</summary>
-          <div class="faq-a">Нет. Vidi — инструмент просмотра и планирования, он не сертифицирован для клинической диагностики. Для диагностики предназначено сертифицированное ПО.</div>
+          <summary>Можно ли использовать Vidi для диагностики или планирования лечения?</summary>
+          <div class="faq-a">Нет. Vidi предназначена для ознакомительной визуализации DICOM-данных, демонстрации и обучения. Не предназначена для постановки диагноза, планирования лечения или принятия клинических решений. Измерения и виртуальные модели используются только для демонстрации.</div>
         </details>
       </div>
 
@@ -165,7 +166,7 @@
   <div class="wrap">
     <div class="disclaimer">
       <svg aria-hidden="true"><use href="#i-alert"/></svg>
-      <span><b>Не предназначено для клинической диагностики.</b> Vidi — инструмент просмотра и планирования; не сертифицирован (нет FDA / CE / Росздравнадзор). Для диагностики предназначено сертифицированное ПО.</span>
+      <span>Vidi предназначена для ознакомительной визуализации DICOM-данных, демонстрации и обучения. Не предназначена для постановки диагноза, планирования лечения или принятия клинических решений. Измерения и виртуальные модели используются только для демонстрации.</span>
     </div>
     <div class="foot-bottom">
       <span>© 2026 Vidi. Все права защищены.</span>
