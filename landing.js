@@ -114,7 +114,8 @@
       if (idx === current) return;
       current = idx;
       steps.forEach((s, i) => s.classList.toggle("on", i === idx));
-      shots.forEach((img, i) => img.classList.toggle("on", i === idx));
+      const shotIdx = Math.min(idx, shots.length - 1);
+      shots.forEach((img, i) => img.classList.toggle("on", i === shotIdx));
     };
     const io = new IntersectionObserver((entries) => {
       entries.forEach((en) => { if (en.isIntersecting) setActive(Number(en.target.dataset.shot)); });
@@ -122,7 +123,7 @@
     steps.forEach((s) => io.observe(s));
   }
 
-  // ---- Интерактив: расстояние от импланта до канала ----
+  // ---- Учебная схема: расстояние от виртуальной модели до канала ----
   const demo = document.getElementById("canal-demo");
   const range = document.getElementById("depth");
   if (demo && range) {
@@ -131,7 +132,6 @@
     const IMPLANT_TOP = 40;
     const D_MAX = 4;
     const D_MIN = 0.2;
-    const LABELS = { good: "Безопасно", warn: "Близко", danger: "Опасно" };
 
     const body = demo.querySelector("#implant-body");
     const thread = demo.querySelector("#implant-thread");
@@ -146,8 +146,6 @@
       const d = D_MAX - (v / 100) * (D_MAX - D_MIN);
       const apex = CANAL_TOP - d * PX_PER_MM;
       const text = d.toFixed(1);
-      const shown = Number(text); // порог — по тому же числу, что видит врач
-      const state = shown >= 2 ? "good" : shown >= 1 ? "warn" : "danger";
 
       body.setAttribute("height", (apex - IMPLANT_TOP).toFixed(1));
       thread.setAttribute("height", Math.max(0, apex - IMPLANT_TOP - 24).toFixed(1));
@@ -157,12 +155,12 @@
       mText.setAttribute("y", ((apex + CANAL_TOP) / 2 + 5).toFixed(1));
       mText.textContent = text + " мм";
 
-      demo.dataset.state = state;
+      demo.dataset.state = "neutral";
       val.firstChild.nodeValue = text;
-      stateEl.textContent = LABELS[state];
-      stateEl.className = "badge badge-" + state;
+      stateEl.textContent = "Демонстрация";
+      stateEl.className = "badge";
       range.style.setProperty("--fill", v + "%");
-      range.setAttribute("aria-valuetext", "До канала " + text + " мм — " + LABELS[state].toLowerCase());
+      range.setAttribute("aria-valuetext", "Демонстрационное расстояние до канала " + text + " мм");
     };
     range.addEventListener("input", update);
     update();
