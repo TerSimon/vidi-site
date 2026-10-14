@@ -41,15 +41,16 @@ if (location.pathname === '/app/') {
   <div class="start">
     <header class="start-head">
       <div class="wordmark brand"><img class="brand-icon" src="icon.webp" alt="" width="36" height="36">Vidi Web</div>
-      <p class="lead">Просмотр КТ в браузере</p>
+      <p class="lead">Ознакомительная визуализация DICOM в браузере</p>
     </header>
 
     <form class="card" id="login-form" novalidate>
+      <p class="notice">Vidi предназначена для ознакомительной визуализации DICOM-данных, демонстрации и обучения. Не предназначена для постановки диагноза, планирования лечения или принятия клинических решений. Измерения и виртуальные модели используются только для демонстрации.</p>
       <label class="field">
         <span class="field-name">Почта</span>
         <input type="email" id="login-email" name="email" autocomplete="email"
                inputmode="email" autocapitalize="none" spellcheck="false"
-               placeholder="doctor@example.com" required>
+               placeholder="name@example.com" required>
       </label>
 
       <label class="field">
@@ -105,10 +106,11 @@ if (location.pathname === '/app/') {
   <div class="start">
     <header class="start-head">
       <div class="wordmark brand"><img class="brand-icon" src="icon.webp" alt="" width="36" height="36">Vidi Web</div>
-      <p class="lead">Просмотр КТ в браузере</p>
+      <p class="lead">Ознакомительная визуализация DICOM в браузере</p>
     </header>
 
     <div class="card">
+      <p class="notice">Vidi предназначена для ознакомительной визуализации DICOM-данных, демонстрации и обучения. Не предназначена для постановки диагноза, планирования лечения или принятия клинических решений. Измерения и виртуальные модели используются только для демонстрации.</p>
       <button class="btn btn-primary" id="btn-open" type="button">Открыть КТ</button>
       <!-- accept не ставим: архивы из клиник приходят с любым расширением, а
            формат всё равно определяется по содержимому, а не по имени. -->
@@ -293,7 +295,7 @@ if (location.pathname === '/app/') {
   <div class="sheet-card">
     <div class="card-title" id="seat-title">Vidi открыт в другом месте</div>
     <p class="notice" id="seat-text"></p>
-    <p class="hint">Подписка рассчитана на одного врача: снимок открыт в одном месте за раз.</p>
+    <p class="hint">Подписка рассчитана на одного пользователя: снимок открыт в одном месте за раз.</p>
     <button class="btn btn-primary" id="seat-claim" type="button">Перенести сюда</button>
   </div>
 </div>
