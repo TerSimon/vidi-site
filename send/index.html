@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Отправить КТ врачу — Vidi</title>
+<meta name="description" content="Отправка КТ врачу в программу Vidi: снимок шифруется в браузере, открыть его может только врач." />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="referrer" content="no-referrer" />
+<meta name="theme-color" content="#0B0E14" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="apple-touch-icon" href="/assets/icon.png" />
+<link rel="stylesheet" href="/styles.css" />
+<link rel="stylesheet" href="./send.css" />
+<script type="module" src="./send.js"></script>
+</head>
+<body>
+<div class="bg-field"></div>
+<div class="bg-grid"></div>
+
+<header class="site-header scrolled">
+  <div class="wrap nav">
+    <a class="brand" href="/"><img class="logo" src="/assets/icon-60.webp" alt="" width="30" height="30" />Vidi<span class="tag">отправка КТ</span></a>
+  </div>
+</header>
+
+<main class="send">
+  <h1>Отправить КТ врачу</h1>
+  <p class="lede">Снимок шифруется прямо в этом браузере ключом врача. Открыть его сможет только врач в программе Vidi — даже сервер Vidi его не прочитает.</p>
+
+  <section class="step" id="step-code">
+    <label class="step-label" for="code"><span class="num">1</span>Код врача</label>
+    <input id="code" class="code-input" type="text" inputmode="text" autocomplete="off" autocapitalize="characters"
+           spellcheck="false" maxlength="12" placeholder="XXXX-XXXX" aria-describedby="code-status" />
+    <p class="status" id="code-status" aria-live="polite">Код — 8 знаков, его даёт врач.</p>
+  </section>
+
+  <section class="step" id="step-files" aria-disabled="true">
+    <div class="step-label"><span class="num">2</span>Снимок</div>
+
+    <div class="drop" id="drop" tabindex="-1">
+      <svg class="drop-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <path d="M6 14a4 4 0 0 1 4-4h9l4 4h15a4 4 0 0 1 4 4v18a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4V14z" stroke="currentColor" stroke-width="2"/>
+        <path d="M24 33V21m0 0-5 5m5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p class="drop-title">Перетащите сюда папку со снимком</p>
+      <p class="drop-sub">или архив ZIP, RAR, 7z, или файлы DICOM</p>
+      <div class="drop-actions">
+        <button class="btn btn-ghost" type="button" id="pick-folder">Выбрать папку</button>
+        <button class="btn btn-ghost" type="button" id="pick-files">Выбрать файлы</button>
+      </div>
+      <input type="file" id="folder-input" webkitdirectory multiple hidden />
+      <input type="file" id="files-input" multiple hidden />
+    </div>
+
+    <div class="scan" id="scan" hidden>
+      <p>Читаю файлы… <span id="scan-count"></span></p>
+      <div class="bar"><i id="scan-bar"></i></div>
+    </div>
+
+    <div class="found" id="found" hidden>
+      <ul class="found-list" id="found-list"></ul>
+      <p class="skipped" id="skipped" hidden></p>
+      <p class="status" id="found-status" aria-live="polite"></p>
+      <div class="send-row">
+        <button class="btn btn-primary btn-lg" type="button" id="send" disabled>Отправить</button>
+        <button class="btn btn-ghost" type="button" id="again">Выбрать другое</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="step-send" hidden>
+    <div class="step-label"><span class="num">3</span>Отправка</div>
+    <p class="send-title" id="send-title">Шифрую и отправляю…</p>
+    <div class="bar big"><i id="send-bar"></i></div>
+    <p class="status" id="send-status" aria-live="polite">Не закрывайте страницу до конца отправки.</p>
+    <div class="send-row" id="send-fail" hidden>
+      <button class="btn btn-primary" type="button" id="retry">Отправить ещё раз</button>
+    </div>
+  </section>
+
+  <section class="step done" id="step-done" hidden>
+    <p class="done-title"><span class="dot good"></span>Готово</p>
+    <p class="done-text">Снимок у врача — он появится в программе Vidi на его Mac.</p>
+    <div class="send-row">
+      <button class="btn btn-ghost" type="button" id="more">Отправить ещё</button>
+    </div>
+  </section>
+
+  <p class="fine">Снимок хранится зашифрованным и удаляется, как только врач его получил, — а если не получил, через 7 дней. <a href="/">Что такое Vidi</a></p>
+</main>
+</body>
+</html>
