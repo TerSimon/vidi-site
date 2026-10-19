@@ -30,9 +30,9 @@
 
   <section class="step" id="step-code">
     <label class="step-label" for="code"><span class="num">1</span>Код врача</label>
-    <input id="code" class="code-input" type="text" inputmode="text" autocomplete="off" autocapitalize="characters"
-           spellcheck="false" maxlength="12" placeholder="XXXX-XXXX" aria-describedby="code-status" />
-    <p class="status" id="code-status" aria-live="polite">Код — 8 знаков, его даёт врач.</p>
+    <input id="code" class="code-input" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off"
+           spellcheck="false" placeholder="000 000" aria-describedby="code-status" />
+    <p class="status" id="code-status" aria-live="polite">Код — 6 цифр, его даёт врач.</p>
   </section>
 
   <section class="step" id="step-files" aria-disabled="true">

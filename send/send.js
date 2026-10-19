@@ -5,11 +5,11 @@ import {
   makeEnvelope, sealMeta, sealChunk, containerStream, compress, chunks, toBase64, fromBase64,
 } from './pack.js';
 import { peek, isArchive } from './dicom-peek.js';
+import { CODE_DIGITS, codeValid, codeDigits, formatCode, isOldCode } from './code.js';
 
 const LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
 const API = LOCAL ? (new URLSearchParams(location.search).get('api') || 'http://127.0.0.1:8932')
   : 'https://api.vidiviewer.ru';
-const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const PARALLEL_UPLOADS = 2;
 const SCAN_WORKERS = 8;
 // Не снимок и Vidi не нужно: программа просмотра с диска, служебное, картинки.
@@ -34,8 +34,7 @@ const state = {
 
 // ---------- Код врача ----------
 
-const normalize = (text) => [...text.toUpperCase()].filter((c) => ALPHABET.includes(c)).join('').slice(0, 8);
-const format = (code) => (code.length > 4 ? `${code.slice(0, 4)}-${code.slice(4)}` : code);
+const CODE_HINT = 'Код — 6 цифр, его даёт врач.';
 
 function setStatus(el, kind, text) {
   el.className = `status${kind ? ` ${kind}` : ''}`;
@@ -77,18 +76,25 @@ async function checkCode(code) {
   lockFiles(true);
 }
 
-ui.code.addEventListener('input', () => {
-  const code = normalize(ui.code.value);
-  ui.code.value = format(code);
-  if (code.length === 8) {
+// Опечатку в коде видно по проверочной цифре — на сервер такой код не уходит.
+function readCode() {
+  const code = codeDigits(ui.code.value);
+  ui.code.value = formatCode(code);
+  if (codeValid(code)) {
     if (code !== state.code) checkCode(code);
-  } else {
-    state.checkSeq++;
-    state.code = null;
-    lockFiles(true);
-    setStatus(ui.codeStatus, '', 'Код — 8 знаков, его даёт врач.');
+    return;
   }
-});
+  state.checkSeq++;
+  state.code = null;
+  lockFiles(true);
+  if (code.length === CODE_DIGITS) {
+    setStatus(ui.codeStatus, 'warn', 'В коде опечатка. Сверьте цифры с врачом.');
+  } else {
+    setStatus(ui.codeStatus, '', CODE_HINT);
+  }
+}
+
+ui.code.addEventListener('input', readCode);
 
 // ---------- Выбор снимка ----------
 
@@ -440,8 +446,12 @@ ui.more.addEventListener('click', () => {
 
 // ---------- Начало: код из ссылки ----------
 
-const fromLink = normalize(decodeURIComponent(location.hash.slice(1)));
-if (fromLink) {
-  ui.code.value = format(fromLink);
-  if (fromLink.length === 8) checkCode(fromLink);
+let fromLink = location.hash.slice(1);
+try { fromLink = decodeURIComponent(fromLink); } catch { /* ссылку исказили — берём как есть */ }
+if (isOldCode(fromLink)) {
+  // Ссылка из Vidi до этапа 6: буквенный код сервер больше не принимает.
+  setStatus(ui.codeStatus, 'warn', 'Ссылка устарела: теперь код — 6 цифр. Попросите у врача новую.');
+} else if (codeDigits(fromLink)) {
+  ui.code.value = fromLink;
+  readCode();
 }
