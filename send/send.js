@@ -3,13 +3,26 @@
 // С этапа 8 уходит папка целиком — Vidi сам найдёт в ней КТ; если пациентов в
 // папке несколько, отправитель один раз выбирает, чей снимок (plan.js).
 
+// Номер версии — в адресах всех файлов страницы (?v=8) и в <html data-version>.
 import {
   makeEnvelope, sealMeta, sealChunk, containerStream, compress, chunks, toBase64, fromBase64,
-} from './pack.js';
-import { peek, sniffArchive } from './dicom-peek.js';
-import { peekZip } from './zip-peek.js';
-import { classify, sortOut, fit, describe } from './plan.js';
-import { CODE_DIGITS, codeValid, codeDigits, formatCode, isOldCode } from './code.js';
+} from './pack.js?v=8';
+import { peek, sniffArchive } from './dicom-peek.js?v=8';
+import { peekZip } from './zip-peek.js?v=8';
+import { classify, sortOut, fit, describe } from './plan.js?v=8';
+import { CODE_DIGITS, codeValid, codeDigits, formatCode, isOldCode } from './code.js?v=8';
+
+// Страница и скрипт — одной версии. Браузер мог взять страницу из своей памяти, а скрипт
+// с сайта (так было у Safari 19.10: шаг «Снимок» опустел). Не совпало — один раз загрузить
+// страницу заново: адрес с ?v= для браузера новый, из памяти его не взять.
+const VERSION = '8';
+if (document.documentElement.dataset.version !== VERSION) {
+  const params = new URLSearchParams(location.search);
+  if (params.get('v') !== VERSION) {
+    params.set('v', VERSION);
+    location.replace(`${location.pathname}?${params}${location.hash}`);
+  }
+}
 
 const LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
 const API = LOCAL ? (new URLSearchParams(location.search).get('api') || 'http://127.0.0.1:8932')
@@ -296,7 +309,12 @@ function update() {
   ui.note.hidden = !note;
   ui.note.textContent = note;
 
-  if (mode === 'empty') {
+  if (mode === 'empty' && state.sorted.unsupported.length) {
+    // 7z, tar, gz Vidi не открывает: отправлять такой архив незачем.
+    const names = state.sorted.unsupported.slice(0, 2).map((n) => `«${n}»`).join(', ');
+    setStatus(ui.foundStatus, 'warn', `${state.sorted.unsupported.length > 1 ? 'Архивы' : 'Архив'} ${names} `
+      + 'Vidi пока не открывает. Распакуйте и перетащите сюда получившуюся папку.');
+  } else if (mode === 'empty') {
     setStatus(ui.foundStatus, 'warn', 'Снимков КТ не нашлось: ни файлов DICOM, ни архивов. Выберите другую папку или весь диск.');
   } else if (mode === 'choose' && !state.choice) {
     setStatus(ui.foundStatus, '', 'Выберите, чей снимок отправить.');

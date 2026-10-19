@@ -9,7 +9,9 @@
 export const NOT_DICOM = /\.(exe|dll|ocx|sys|msi|cab|bat|cmd|com|lnk|inf|ini|cfg|manifest|mo|qm|qss|chm|hlp|htm|html|js|css|txt|rtf|pdf|doc|docx|xls|xlsx|xml|json|log|db|ico|cur|bmp|gif|jpg|jpeg|png|tif|tiff|svg|ttf|otf|stl|wav|mp3|mp4|avi|mov|ds_store)$/i;
 
 const ARCHIVE_ZIP = /\.zip$/i;
-const ARCHIVE_OTHER = /\.(rar|7z|tar|tgz|gz|bz2|xz)$/i;
+const ARCHIVE_RAR = /\.rar$/i;
+// Такие архивы Vidi не открывает: снимок в них до Vidi не дойдёт.
+const ARCHIVE_UNSUPPORTED = /\.(7z|tar|tgz|gz|bz2|xz)$/i;
 // Служебное системы — не уходит даже с папкой целиком.
 const JUNK_NAME = /^(thumbs\.db|desktop\.ini)$/i;
 const JUNK_DIR = /^(__macosx|\$recycle\.bin|system volume information)$/i;
@@ -33,10 +35,14 @@ export function hasRealExtension(name) {
   return /\.(?=[a-z0-9]*[a-z])[a-z0-9]{1,5}$/i.test(name);
 }
 
-/** Архив по имени: 'zip' — заглянем внутрь, 'other' — внутрь не заглянуть, null — не архив. */
+/**
+ * Архив по имени: 'zip' — заглянем внутрь; 'rar' — внутрь не заглянуть, но Vidi его
+ * откроет; 'unsupported' — 7z, tar, gz: Vidi их не открывает; null — не архив.
+ */
 export function archiveByName(name) {
   if (ARCHIVE_ZIP.test(name)) return 'zip';
-  return ARCHIVE_OTHER.test(name) ? 'other' : null;
+  if (ARCHIVE_RAR.test(name)) return 'rar';
+  return ARCHIVE_UNSUPPORTED.test(name) ? 'unsupported' : null;
 }
 
 /** Заведомо не снимок — читать заголовок незачем. DICOMDIR — оглавление диска. */
@@ -47,33 +53,33 @@ export function skipPeek(name) {
 /**
  * Что это за файл — по имени, а если нужно, по содержимому. io — чтение файла:
  * { peek, peekZip, sniffArchive } из dicom-peek.js и zip-peek.js (в тестах — подставные).
- * → { kind: 'junk' | 'dicom' | 'zip' | 'opaque' | 'other', info?, infos? }
+ * → { kind: 'junk' | 'dicom' | 'zip' | 'opaque' | 'unsupported' | 'other', info?, infos? }
  */
 export async function classify(path, file, io) {
   if (isJunk(path)) return { kind: 'junk' };
   const name = baseName(path);
-  const archive = archiveByName(name);
-  if (archive === 'zip') return io.peekZip(file);
-  if (archive) return { kind: 'opaque' };
-  if (skipPeek(name)) return { kind: 'other' };
-  const info = await io.peek(file);
-  if (info) return { kind: 'dicom', info };
-  // Архив без расширения («КТ Иванова 12.10.2026») узнаём по первым байтам.
-  if (!hasRealExtension(name)) {
-    const sniffed = await io.sniffArchive(file);
-    if (sniffed === 'zip') return io.peekZip(file);
-    if (sniffed) return { kind: 'opaque' };
+  let archive = archiveByName(name);
+  if (!archive && skipPeek(name)) return { kind: 'other' };
+  if (!archive) {
+    const info = await io.peek(file);
+    if (info) return { kind: 'dicom', info };
+    // Архив без расширения («КТ Иванова 12.10.2026») узнаём по первым байтам.
+    if (!hasRealExtension(name)) archive = await io.sniffArchive(file);
   }
+  if (archive === 'zip') return io.peekZip(file);
+  if (archive === 'rar') return { kind: 'opaque' };
+  if (archive) return { kind: 'unsupported' };
   return { kind: 'other' };
 }
 
 /**
- * Кто на снимке: имя без регистра и лишних пробелов плюс номер пациента. Без имени
- * и номера — исследование (анонимные снимки разных людей не сливаются). Пустая
- * строка — не понять, чей.
+ * Кто на снимке: имя без регистра и лишних пробелов, «ё» как «е», плюс номер пациента.
+ * Без имени и номера — исследование (анонимные снимки разных людей не сливаются).
+ * Пустая строка — не понять, чей.
  */
 export function personKey(info) {
-  const name = (info.patient || '').toLocaleLowerCase('ru').replace(/\s+/g, ' ').trim();
+  const name = (info.patient || '').normalize('NFC').toLocaleLowerCase('ru').replace(/ё/g, 'е')
+    .replace(/\s+/g, ' ').trim();
   const id = (info.patientId || '').trim();
   if (name || id) return `${name}|${id}`;
   return info.study ? `study|${info.study}` : '';
@@ -108,11 +114,13 @@ function archiveOption(entry) {
  * entries — [{ path, size, kind, info?, infos? }] без служебного (isJunk):
  *   'dicom'  — снимок, info — заголовок;
  *   'zip'    — архив со снимками, infos — заголовки найденных внутри;
- *   'opaque' — архив, внутрь которого не заглянуть;
+ *   'opaque' — архив, внутрь которого не заглянуть (RAR, ZIP с шифром);
+ *   'unsupported' — архив, который Vidi не открывает (7z, tar, gz): не снимок для Vidi;
  *   'other'  — всё остальное.
- * → { mode: 'whole' | 'choose' | 'empty', folder, whole, core, options, person }
+ * → { mode: 'whole' | 'choose' | 'empty', folder, whole, core, options, person, unsupported }
  *   whole — вся папка; core — только снимки и архивы (если вся не влезает в лимит);
- *   options — варианты «чей снимок»; person — пациент папки, если он один и известен.
+ *   options — варианты «чей снимок»; person — пациент папки, если он один и известен;
+ *   unsupported — имена архивов, которые Vidi не открывает (подсказка, если снимков нет).
  */
 export function sortOut(entries) {
   const people = new Map();
@@ -177,9 +185,10 @@ export function sortOut(entries) {
     mode,
     folder: commonFolder(entries),
     whole: pack(entries),
-    core: pack(entries.filter((e) => e.kind !== 'other')),
+    core: pack(entries.filter((e) => e.kind !== 'other' && e.kind !== 'unsupported')),
     options,
     person: mode === 'whole' && persons.length === 1 ? persons[0] : null,
+    unsupported: entries.filter((e) => e.kind === 'unsupported').map((e) => baseName(e.path)),
   };
 }
 

@@ -26,13 +26,13 @@ const WANTED = new Map([
   ['0020,000D', 'study'],
 ]);
 
-/** Архив по первым байтам: 'zip', 'other' (RAR, 7z, gzip) или null. */
+/** Архив по первым байтам: 'zip', 'rar', 'unsupported' (7z, gzip — Vidi их не открывает) или null. */
 export async function sniffArchive(file) {
   const b = new Uint8Array(await file.slice(0, 8).arrayBuffer());
   if (b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04) return 'zip';
-  if ((b[0] === 0x52 && b[1] === 0x61 && b[2] === 0x72 && b[3] === 0x21) // Rar!
-    || (b[0] === 0x37 && b[1] === 0x7a && b[2] === 0xbc && b[3] === 0xaf) // 7z
-    || (b[0] === 0x1f && b[1] === 0x8b)) return 'other'; // gzip
+  if (b[0] === 0x52 && b[1] === 0x61 && b[2] === 0x72 && b[3] === 0x21) return 'rar'; // Rar!
+  if ((b[0] === 0x37 && b[1] === 0x7a && b[2] === 0xbc && b[3] === 0xaf) // 7z
+    || (b[0] === 0x1f && b[1] === 0x8b)) return 'unsupported'; // gzip
   return null;
 }
 
