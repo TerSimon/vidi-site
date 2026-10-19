@@ -1,6 +1,6 @@
 // Быстрый взгляд на файл: снимок ли это и чей. Читает только начало файла —
 // заголовок DICOM, — чтобы показать отправителю «Иванов И. И., КТ, 12.10.2026»
-// до отправки и не тащить в Vidi программу-просмотрщик с диска.
+// до отправки и понять, сколько в папке пациентов.
 //
 // Проходит неявный и явный VR, последовательности неизвестной длины (в том
 // числе UN — внутри у неё неявный VR по стандарту) и значения во вложенных
@@ -22,35 +22,34 @@ const WANTED = new Map([
   ['0008,0060', 'modality'],
   ['0008,1030', 'description'],
   ['0010,0010', 'patient'],
+  ['0010,0020', 'patientId'],
   ['0020,000D', 'study'],
 ]);
 
-const ARCHIVE_EXT = /\.(zip|rar|7z|tar|tgz|gz)$/i;
-
-/** Архив по имени или по первым байтам. */
-export async function isArchive(file) {
-  if (ARCHIVE_EXT.test(file.name)) return true;
+/** Архив по первым байтам: 'zip', 'other' (RAR, 7z, gzip) или null. */
+export async function sniffArchive(file) {
   const b = new Uint8Array(await file.slice(0, 8).arrayBuffer());
-  return (b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04) // ZIP
-    || (b[0] === 0x52 && b[1] === 0x61 && b[2] === 0x72 && b[3] === 0x21) // Rar!
+  if (b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04) return 'zip';
+  if ((b[0] === 0x52 && b[1] === 0x61 && b[2] === 0x72 && b[3] === 0x21) // Rar!
     || (b[0] === 0x37 && b[1] === 0x7a && b[2] === 0xbc && b[3] === 0xaf) // 7z
-    || (b[0] === 0x1f && b[1] === 0x8b); // gzip
+    || (b[0] === 0x1f && b[1] === 0x8b)) return 'other'; // gzip
+  return null;
 }
 
 /**
  * Заголовок снимка — или null, если это не DICOM.
- * → { patient, date, modality, description, study }
+ * → { patient, patientId, date, modality, description, study }
  */
 export async function peek(file) {
-  const info = await peekHead(file, HEAD_BYTES);
+  const info = peekBytes(await file.slice(0, HEAD_BYTES).arrayBuffer());
   if (info && !info.patient && !info.study && file.size > HEAD_BYTES) {
-    return (await peekHead(file, LONG_HEAD_BYTES)) ?? info;
+    return peekBytes(await file.slice(0, LONG_HEAD_BYTES).arrayBuffer()) ?? info;
   }
   return info;
 }
 
-async function peekHead(file, bytes) {
-  const buf = await file.slice(0, bytes).arrayBuffer();
+/** То же по началу файла, уже прочитанному в память (файл внутри ZIP). */
+export function peekBytes(buf) {
   const view = new DataView(buf);
   const raw = {};
   let off;
@@ -69,7 +68,7 @@ async function peekHead(file, bytes) {
       if (el.tag === '0002,0010') ts = text(new Uint8Array(buf, el.value, el.length)).replace(/\0/g, '').trim();
       off = el.value + el.length;
     }
-    if (ts === DEFLATED) return { patient: '', date: '', modality: '', description: '', study: '' };
+    if (ts === DEFLATED) return { patient: '', patientId: '', date: '', modality: '', description: '', study: '' };
     explicit = ts !== IMPLICIT_LE;
     little = ts !== EXPLICIT_BE;
   } else {
@@ -88,6 +87,7 @@ async function peekHead(file, bytes) {
   const field = (tag) => (raw[tag] ? decode(raw[tag], charset) : '');
   return {
     patient: personName(field('0010,0010')),
+    patientId: field('0010,0020').replace(/\0/g, '').trim(),
     date: dicomDate(field('0008,0020')),
     modality: field('0008,0060').trim(),
     description: field('0008,1030').trim(),

@@ -43,8 +43,8 @@
         <path d="M6 14a4 4 0 0 1 4-4h9l4 4h15a4 4 0 0 1 4 4v18a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4V14z" stroke="currentColor" stroke-width="2"/>
         <path d="M24 33V21m0 0-5 5m5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <p class="drop-title">Перетащите сюда папку со снимком</p>
-      <p class="drop-sub">или архив ZIP, RAR, 7z, или файлы DICOM</p>
+      <p class="drop-title">Перетащите сюда папку или весь диск со снимком</p>
+      <p class="drop-sub">Ничего искать не нужно — Vidi сам найдёт КТ. Можно и архив ZIP, RAR, 7z</p>
       <div class="drop-actions">
         <button class="btn btn-ghost" type="button" id="pick-folder">Выбрать папку</button>
         <button class="btn btn-ghost" type="button" id="pick-files">Выбрать файлы</button>
@@ -59,8 +59,9 @@
     </div>
 
     <div class="found" id="found" hidden>
+      <p class="ask" id="ask" hidden>В папке снимки нескольких пациентов. Чей снимок отправить?</p>
       <ul class="found-list" id="found-list"></ul>
-      <p class="skipped" id="skipped" hidden></p>
+      <p class="note" id="note" hidden></p>
       <p class="status" id="found-status" aria-live="polite"></p>
       <div class="send-row">
         <button class="btn btn-primary btn-lg" type="button" id="send" disabled>Отправить</button>

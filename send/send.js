@@ -1,10 +1,14 @@
-// Страница отправки КТ: код врача → снимок → шифрование в браузере → загрузка
-// частями прямо в хранилище. Сервер Vidi видит только зашифрованное.
+// Страница отправки КТ: код врача → папка со снимком → шифрование в браузере →
+// загрузка частями прямо в хранилище. Сервер Vidi видит только зашифрованное.
+// С этапа 8 уходит папка целиком — Vidi сам найдёт в ней КТ; если пациентов в
+// папке несколько, отправитель один раз выбирает, чей снимок (plan.js).
 
 import {
   makeEnvelope, sealMeta, sealChunk, containerStream, compress, chunks, toBase64, fromBase64,
 } from './pack.js';
-import { peek, isArchive } from './dicom-peek.js';
+import { peek, sniffArchive } from './dicom-peek.js';
+import { peekZip } from './zip-peek.js';
+import { classify, sortOut, fit, describe } from './plan.js';
 import { CODE_DIGITS, codeValid, codeDigits, formatCode, isOldCode } from './code.js';
 
 const LOCAL = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
@@ -12,15 +16,13 @@ const API = LOCAL ? (new URLSearchParams(location.search).get('api') || 'http://
   : 'https://api.vidiviewer.ru';
 const PARALLEL_UPLOADS = 2;
 const SCAN_WORKERS = 8;
-// Не снимок и Vidi не нужно: программа просмотра с диска, служебное, картинки.
-const NOT_DICOM = /\.(exe|dll|inf|ini|ico|bat|cmd|msi|sys|htm|html|js|css|txt|pdf|xml|json|jpg|jpeg|png|bmp|gif|lnk|db|ds_store)$/i;
 
 const $ = (id) => document.getElementById(id);
 const ui = {
   code: $('code'), codeStatus: $('code-status'),
   files: $('step-files'), drop: $('drop'), folderInput: $('folder-input'), filesInput: $('files-input'),
   scan: $('scan'), scanCount: $('scan-count'), scanBar: $('scan-bar'),
-  found: $('found'), list: $('found-list'), skipped: $('skipped'), foundStatus: $('found-status'),
+  found: $('found'), ask: $('ask'), list: $('found-list'), note: $('note'), foundStatus: $('found-status'),
   send: $('send'), again: $('again'),
   stepSend: $('step-send'), sendTitle: $('send-title'), sendBar: $('send-bar'), sendStatus: $('send-status'),
   sendFail: $('send-fail'), retry: $('retry'),
@@ -29,7 +31,7 @@ const ui = {
 
 const state = {
   code: null, recipient: null, maxBytes: 0, checkSeq: 0,
-  items: [], skipped: { count: 0, bytes: 0 }, busy: false,
+  sorted: null, choice: null, plan: null, busy: false,
 };
 
 // ---------- Код врача ----------
@@ -99,16 +101,20 @@ ui.code.addEventListener('input', readCode);
 // ---------- Выбор снимка ----------
 
 async function walkEntry(entry, prefix, out) {
-  if (entry.isFile) {
-    const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
-    out.push({ path: prefix + entry.name, file });
-  } else if (entry.isDirectory) {
-    const reader = entry.createReader();
-    for (;;) {
-      const batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
-      if (!batch.length) break;
-      for (const child of batch) await walkEntry(child, `${prefix}${entry.name}/`, out);
+  try {
+    if (entry.isFile) {
+      const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
+      out.push({ path: prefix + entry.name, file });
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      for (;;) {
+        const batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+        if (!batch.length) break;
+        for (const child of batch) await walkEntry(child, `${prefix}${entry.name}/`, out);
+      }
     }
+  } catch {
+    // Недоступное браузеру (системные папки диска) пропускаем — остальное уйдёт.
   }
 }
 
@@ -147,7 +153,7 @@ for (const input of [ui.folderInput, ui.filesInput]) {
   });
 }
 
-// ---------- Разбор: что нашлось ----------
+// ---------- Разбор: что в папке ----------
 
 const mb = (bytes) => (bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} ГБ`
   : `${Math.max(1, Math.round(bytes / 1e6))} МБ`).replace('.', ',');
@@ -160,13 +166,8 @@ const filesWord = (n) => {
   return `${n} файлов`;
 };
 
-async function classify(entry) {
-  const name = entry.path.split('/').pop();
-  if (/^DICOMDIR$/i.test(name) || NOT_DICOM.test(name) || name.startsWith('.')) return { kind: 'skip' };
-  if (await isArchive(entry.file)) return { kind: 'archive' };
-  const info = await peek(entry.file);
-  return info ? { kind: 'dicom', info } : { kind: 'skip' };
-}
+// Чем читать файлы при разборе: заголовок снимка, оглавление ZIP, первые байты.
+const IO = { peek, peekZip, sniffArchive };
 
 /** Обход большой папки занимает секунды — строка «Читаю файлы…» видна сразу. */
 function beginScan() {
@@ -180,9 +181,7 @@ function beginScan() {
 
 async function scan(list) {
   beginScan();
-  const groups = new Map();
-  const archives = [];
-  const skipped = { count: 0, bytes: 0 };
+  const scanned = [];
   let done = 0;
   const queue = list.slice();
   const tick = () => {
@@ -196,25 +195,11 @@ async function scan(list) {
       const entry = queue.shift();
       let result;
       try {
-        result = await classify(entry);
+        result = await classify(entry.path, entry.file, IO);
       } catch {
-        result = { kind: 'skip' };
+        result = { kind: 'other' };
       }
-      if (result.kind === 'archive') {
-        archives.push({ kind: 'archive', title: entry.path.split('/').pop(), entries: [entry], bytes: entry.file.size });
-      } else if (result.kind === 'dicom') {
-        const { info } = result;
-        // Исследование и пациент: номер исследования бывает одинаковым у разных
-        // людей (так пишут некоторые аппараты), а смешивать пациентов нельзя.
-        const key = `${info.study}|${info.patient}|${info.study ? '' : info.date}`;
-        if (!groups.has(key)) groups.set(key, { kind: 'study', info, entries: [], bytes: 0 });
-        const g = groups.get(key);
-        g.entries.push(entry);
-        g.bytes += entry.file.size;
-      } else {
-        skipped.count += 1;
-        skipped.bytes += entry.file.size;
-      }
+      if (result.kind !== 'junk') scanned.push({ ...entry, size: entry.file.size, ...result });
       done += 1;
       if (done % 25 === 0) tick();
     }
@@ -222,93 +207,116 @@ async function scan(list) {
   await Promise.all(Array.from({ length: SCAN_WORKERS }, worker));
   tick();
 
-  state.items = [...groups.values(), ...archives];
-  state.skipped = skipped;
+  // Файлы — в порядке папки: читали их в несколько потоков.
+  scanned.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  state.sorted = sortOut(scanned);
   state.busy = false;
   showFound();
 }
 
-function itemTitle(item) {
-  if (item.kind === 'archive') return item.title;
-  return item.info.patient || 'Пациент без имени';
+const modalityWord = (modality) => (modality === 'CT' ? 'КТ' : modality);
+
+function optionInfo(option) {
+  if (option.kind === 'person') {
+    const { modality, date } = option.info;
+    return [modalityWord(modality), date, mb(option.bytes)].filter(Boolean).join(' · ');
+  }
+  const where = option.patients ? 'несколько пациентов' : option.folder;
+  return ['Архив', where, mb(option.bytes)].filter(Boolean).join(' · ');
 }
 
-function itemInfo(item) {
-  if (item.kind === 'archive') return `Архив · ${mb(item.bytes)}`;
-  const { modality, date } = item.info;
-  const parts = [modality === 'CT' ? 'КТ' : modality, date, filesWord(item.entries.length), mb(item.bytes)];
-  return parts.filter(Boolean).join(' · ');
+function foundItem(title, info, option) {
+  const li = document.createElement('li');
+  li.className = 'found-item';
+  const what = document.createElement('div');
+  what.className = 'what';
+  const who = document.createElement('div');
+  who.className = 'who';
+  who.textContent = title;
+  const line = document.createElement('div');
+  line.className = 'info';
+  line.textContent = info;
+  what.append(who, line);
+  if (!option) {
+    li.classList.add('on', 'whole');
+    li.append(what);
+    return li;
+  }
+  const radio = document.createElement('input');
+  radio.type = 'radio';
+  radio.name = 'who';
+  radio.setAttribute('aria-label', title);
+  li.append(radio, what);
+  const choose = () => {
+    state.choice = option;
+    radio.checked = true;
+    for (const other of ui.list.children) other.classList.toggle('on', other === li);
+    update();
+  };
+  radio.addEventListener('change', choose);
+  li.addEventListener('click', (e) => { if (e.target !== radio) choose(); });
+  return li;
 }
 
 function showFound() {
+  const { mode, options, person, folder } = state.sorted;
   ui.scan.hidden = true;
   ui.list.textContent = '';
-  // Один снимок — отмечен сразу. Несколько — отправитель выбирает сам:
-  // в общей папке клиники лежат и чужие пациенты.
-  const single = state.items.length === 1;
-  state.items.forEach((item) => {
-    item.on = single;
-    const li = document.createElement('li');
-    li.className = `found-item${item.on ? ' on' : ''}`;
-    const box = document.createElement('input');
-    box.type = 'checkbox';
-    box.checked = item.on;
-    box.setAttribute('aria-label', itemTitle(item));
-    const what = document.createElement('div');
-    what.className = 'what';
-    const who = document.createElement('div');
-    who.className = 'who';
-    who.textContent = itemTitle(item);
-    const info = document.createElement('div');
-    info.className = 'info';
-    info.textContent = itemInfo(item);
-    what.append(who, info);
-    li.append(box, what);
-    const toggle = (on) => {
-      item.on = on;
-      box.checked = on;
-      li.classList.toggle('on', on);
-      updateSend();
-    };
-    box.addEventListener('change', () => toggle(box.checked));
-    li.addEventListener('click', (e) => { if (e.target !== box) toggle(!item.on); });
-    ui.list.append(li);
-  });
-
-  if (state.skipped.count) {
-    ui.skipped.hidden = false;
-    ui.skipped.textContent = `Не отправляются: ${filesWord(state.skipped.count)} — программа просмотра и служебные (${mb(state.skipped.bytes)}).`;
-  } else {
-    ui.skipped.hidden = true;
+  state.choice = null;
+  // Несколько пациентов — один вопрос «чей снимок»: в общей папке клиники лежат и чужие.
+  ui.ask.hidden = mode !== 'choose';
+  if (mode === 'whole') {
+    const title = person?.title || folder || (options.length === 1 ? options[0].title : 'Выбранные файлы');
+    const info = person
+      ? [modalityWord(person.info.modality), person.info.date].filter(Boolean).join(' · ') || 'Снимок'
+      : 'Папка';
+    ui.list.append(foundItem(title, info, null));
+  } else if (mode === 'choose') {
+    for (const option of options) ui.list.append(foundItem(option.title, optionInfo(option), option));
   }
   ui.found.hidden = false;
-  updateSend();
+  update();
 }
 
-function selected() {
-  return state.items.filter((i) => i.on);
-}
+function update() {
+  const { mode, whole, core } = state.sorted;
+  let plan = null;
+  if (mode === 'whole') plan = fit(whole, state.maxBytes, core);
+  else if (mode === 'choose' && state.choice) plan = fit(state.choice, state.maxBytes);
+  state.plan = plan;
 
-function updateSend() {
-  const items = selected();
-  const bytes = items.reduce((s, i) => s + i.bytes, 0);
-  if (!state.items.length) {
-    setStatus(ui.foundStatus, 'warn', 'Снимков DICOM и архивов не нашлось. Выберите папку со снимком.');
-  } else if (!items.length) {
-    setStatus(ui.foundStatus, '', state.items.length > 1 ? 'Отметьте, что отправить.' : '');
-  } else if (state.maxBytes && bytes > state.maxBytes) {
-    setStatus(ui.foundStatus, 'warn', `Больше ${mb(state.maxBytes)} за раз не отправить. Отметьте меньше.`);
-  } else {
-    setStatus(ui.foundStatus, '', `К отправке: ${mb(bytes)}`);
+  let note = '';
+  if (mode === 'whole' && plan?.trimmed) {
+    note = `Папка больше ${mb(state.maxBytes)} — отправятся только снимки и архивы. Программы и картинки Vidi не нужны.`;
+  } else if (mode === 'whole' && plan) {
+    note = `Отправится вся папка — ${filesWord(whole.entries.length)}. Vidi сам найдёт в ней КТ.`;
+  } else if (mode === 'choose') {
+    note = 'Другие пациенты и остальные файлы папки не отправятся.';
   }
-  ui.send.disabled = !items.length || (state.maxBytes && bytes > state.maxBytes);
+  ui.note.hidden = !note;
+  ui.note.textContent = note;
+
+  if (mode === 'empty') {
+    setStatus(ui.foundStatus, 'warn', 'Снимков КТ не нашлось: ни файлов DICOM, ни архивов. Выберите другую папку или весь диск.');
+  } else if (mode === 'choose' && !state.choice) {
+    setStatus(ui.foundStatus, '', 'Выберите, чей снимок отправить.');
+  } else if (!plan) {
+    setStatus(ui.foundStatus, 'warn', `Больше ${mb(state.maxBytes)} за раз не отправить.`);
+  } else {
+    setStatus(ui.foundStatus, '', `К отправке: ${mb(plan.bytes)}`);
+  }
+  ui.send.disabled = !plan;
 }
 
-ui.again.addEventListener('click', () => {
+function reset() {
   ui.found.hidden = true;
   ui.drop.hidden = false;
-  state.items = [];
-});
+  state.sorted = null;
+  state.choice = null;
+  state.plan = null;
+}
+
+ui.again.addEventListener('click', reset);
 
 // ---------- Отправка ----------
 
@@ -358,9 +366,7 @@ const MESSAGES = {
 };
 
 async function send() {
-  const items = selected();
-  const entries = items.flatMap((i) => i.entries);
-  const total = entries.reduce((s, e) => s + e.file.size, 0);
+  const { entries, bytes: total } = state.plan;
   state.busy = true;
   ui.files.hidden = true;
   ui.stepSend.hidden = false;
@@ -382,18 +388,7 @@ async function send() {
       ui.sendBar.style.width = `${pct}%`;
       ui.sendTitle.textContent = `Шифрую и отправляю… ${pct}%`;
     }));
-    const meta = {
-      v: 1,
-      compression,
-      studies: items.filter((i) => i.kind === 'study').map((i) => ({
-        patient: i.info.patient, date: i.info.date, modality: i.info.modality,
-        description: i.info.description, files: i.entries.length, bytes: i.bytes,
-      })),
-      archives: items.filter((i) => i.kind === 'archive').map((i) => ({ name: i.title, bytes: i.bytes })),
-      files: entries.length,
-      bytes: total,
-      sent_at: new Date().toISOString(),
-    };
+    const meta = { v: 1, compression, ...describe(entries), sent_at: new Date().toISOString() };
     const start = await api('/inbox/upload', {
       code: state.code,
       sender_key: toBase64(envelope.senderKey),
@@ -434,14 +429,12 @@ async function send() {
   }
 }
 
-ui.send.addEventListener('click', () => { if (!state.busy) send(); });
-ui.retry.addEventListener('click', () => { if (!state.busy) send(); });
+ui.send.addEventListener('click', () => { if (!state.busy && state.plan) send(); });
+ui.retry.addEventListener('click', () => { if (!state.busy && state.plan) send(); });
 ui.more.addEventListener('click', () => {
   ui.done.hidden = true;
   ui.files.hidden = false;
-  ui.found.hidden = true;
-  ui.drop.hidden = false;
-  state.items = [];
+  reset();
 });
 
 // ---------- Начало: код из ссылки ----------

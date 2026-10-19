@@ -75,7 +75,9 @@
 .found-item .what { min-width: 0; }
 .found-item .who { font-size: 15px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .found-item .info { font-family: var(--font-mono); font-size: 12px; color: var(--ink-dim); margin-top: 2px; }
-.skipped { margin: var(--space-tight) 0 0; font-size: 13px; color: var(--ink-faint); }
+.found-item.whole { cursor: default; }
+.ask { margin: 0 0 var(--space-tight); font-size: 15px; font-weight: 600; color: var(--ink); }
+.note { margin: var(--space-tight) 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-faint); }
 
 .send-row { display: flex; flex-wrap: wrap; gap: var(--space-tight); margin-top: var(--space-compact); }
 .btn[disabled] { opacity: .45; cursor: default; transform: none; filter: none; }
