@@ -3,8 +3,8 @@
 // весь архив не распаковывается. Так страница отличает CT.zip со снимком от
 // CDViewer64.zip с программой просмотра и узнаёт, сколько в папке пациентов.
 
-import { peekBytes } from './dicom-peek.js?v=8';
-import { isJunk, archiveByName, skipPeek } from './plan.js?v=8';
+import { peekBytes } from './dicom-peek.js?v=9';
+import { isJunk, archiveByName, skipPeek } from './plan.js?v=9';
 
 const EOCD = 0x06054b50;
 const EOCD64 = 0x06064b50;

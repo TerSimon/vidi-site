@@ -3,19 +3,19 @@
 // С этапа 8 уходит папка целиком — Vidi сам найдёт в ней КТ; если пациентов в
 // папке несколько, отправитель один раз выбирает, чей снимок (plan.js).
 
-// Номер версии — в адресах всех файлов страницы (?v=8) и в <html data-version>.
+// Номер версии — в адресах всех файлов страницы (?v=9) и в <html data-version>.
 import {
   makeEnvelope, sealMeta, sealChunk, containerStream, compress, chunks, toBase64, fromBase64,
-} from './pack.js?v=8';
-import { peek, sniffArchive } from './dicom-peek.js?v=8';
-import { peekZip } from './zip-peek.js?v=8';
-import { classify, sortOut, fit, describe } from './plan.js?v=8';
-import { CODE_DIGITS, codeValid, codeDigits, formatCode, isOldCode } from './code.js?v=8';
+} from './pack.js?v=9';
+import { peek, sniffArchive } from './dicom-peek.js?v=9';
+import { peekZip } from './zip-peek.js?v=9';
+import { classify, sortOut, fit, describe } from './plan.js?v=9';
+import { CODE_DIGITS, codeValid, codeDigits, formatCode, isOldCode } from './code.js?v=9';
 
 // Страница и скрипт — одной версии. Браузер мог взять страницу из своей памяти, а скрипт
 // с сайта (так было у Safari 19.10: шаг «Снимок» опустел). Не совпало — один раз загрузить
 // страницу заново: адрес с ?v= для браузера новый, из памяти его не взять.
-const VERSION = '8';
+const VERSION = '9';
 if (document.documentElement.dataset.version !== VERSION) {
   const params = new URLSearchParams(location.search);
   if (params.get('v') !== VERSION) {

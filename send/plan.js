@@ -10,8 +10,9 @@ export const NOT_DICOM = /\.(exe|dll|ocx|sys|msi|cab|bat|cmd|com|lnk|inf|ini|cfg
 
 const ARCHIVE_ZIP = /\.zip$/i;
 const ARCHIVE_RAR = /\.rar$/i;
+const ARCHIVE_7Z = /\.7z$/i;
 // Такие архивы Vidi не открывает: снимок в них до Vidi не дойдёт.
-const ARCHIVE_UNSUPPORTED = /\.(7z|tar|tgz|gz|bz2|xz)$/i;
+const ARCHIVE_UNSUPPORTED = /\.(tar|tgz|gz|bz2|xz)$/i;
 // Служебное системы — не уходит даже с папкой целиком.
 const JUNK_NAME = /^(thumbs\.db|desktop\.ini)$/i;
 const JUNK_DIR = /^(__macosx|\$recycle\.bin|system volume information)$/i;
@@ -36,12 +37,13 @@ export function hasRealExtension(name) {
 }
 
 /**
- * Архив по имени: 'zip' — заглянем внутрь; 'rar' — внутрь не заглянуть, но Vidi его
- * откроет; 'unsupported' — 7z, tar, gz: Vidi их не открывает; null — не архив.
+ * Архив по имени: 'zip' — заглянем внутрь; 'rar', '7z' — внутрь не заглянуть, но Vidi
+ * их откроет; 'unsupported' — tar, gz: Vidi их не открывает; null — не архив.
  */
 export function archiveByName(name) {
   if (ARCHIVE_ZIP.test(name)) return 'zip';
   if (ARCHIVE_RAR.test(name)) return 'rar';
+  if (ARCHIVE_7Z.test(name)) return '7z';
   return ARCHIVE_UNSUPPORTED.test(name) ? 'unsupported' : null;
 }
 
@@ -67,7 +69,7 @@ export async function classify(path, file, io) {
     if (!hasRealExtension(name)) archive = await io.sniffArchive(file);
   }
   if (archive === 'zip') return io.peekZip(file);
-  if (archive === 'rar') return { kind: 'opaque' };
+  if (archive === 'rar' || archive === '7z') return { kind: 'opaque' };
   if (archive) return { kind: 'unsupported' };
   return { kind: 'other' };
 }
@@ -114,8 +116,8 @@ function archiveOption(entry) {
  * entries — [{ path, size, kind, info?, infos? }] без служебного (isJunk):
  *   'dicom'  — снимок, info — заголовок;
  *   'zip'    — архив со снимками, infos — заголовки найденных внутри;
- *   'opaque' — архив, внутрь которого не заглянуть (RAR, ZIP с шифром);
- *   'unsupported' — архив, который Vidi не открывает (7z, tar, gz): не снимок для Vidi;
+ *   'opaque' — архив, внутрь которого не заглянуть (RAR, 7z, ZIP с шифром);
+ *   'unsupported' — архив, который Vidi не открывает (tar, gz): не снимок для Vidi;
  *   'other'  — всё остальное.
  * → { mode: 'whole' | 'choose' | 'empty', folder, whole, core, options, person, unsupported }
  *   whole — вся папка; core — только снимки и архивы (если вся не влезает в лимит);
