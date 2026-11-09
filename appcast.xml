@@ -3,6 +3,15 @@
     <channel>
         <title>Vidi</title>
         <item>
+            <title>2.1.6</title>
+            <pubDate>Mon, 09 Nov 2026 23:07:39 +0300</pubDate>
+            <sparkle:version>44</sparkle:version>
+            <sparkle:shortVersionString>2.1.6</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-2.1.6.dmg" length="40501183" type="application/octet-stream" sparkle:edSignature="TpNsT9PlETDReeYhm6wujOi50UC9VvwznaOHWnoLbtbVfLKrIWyussJfw80zQsw5toS648782SKOJLgvG6Z2Bg=="/>
+        </item>
+        <item>
             <title>2.1.5</title>
             <pubDate>Fri, 06 Nov 2026 09:23:02 +0300</pubDate>
             <sparkle:version>43</sparkle:version>
@@ -19,15 +28,6 @@
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-2.1.4.dmg" length="39031464" type="application/octet-stream" sparkle:edSignature="BIP6gNZ34JLIcbPMsJySNUpnl6cN9rd2szeYXBkNSX6G7HAZgxVR83ppP6k3qLXZOSKZdnFfZACvxgq6BUInAA=="/>
-        </item>
-        <item>
-            <title>2.1.3</title>
-            <pubDate>Mon, 02 Nov 2026 01:14:47 +0300</pubDate>
-            <sparkle:version>41</sparkle:version>
-            <sparkle:shortVersionString>2.1.3</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://storage.yandexcloud.net/videviewergmd/Vidi-2.1.3.dmg" length="39031377" type="application/octet-stream" sparkle:edSignature="72z378W21b0WcpOxEQL5MZlPHn2OGVa9wGE0Uxc7tTQ7k6T8ew4OL+1YyaA9K/wQLnr8kmwOkz0TKNrbqGxlBQ=="/>
         </item>
     </channel>
 </rss>
