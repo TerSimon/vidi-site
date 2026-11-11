@@ -12,8 +12,8 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, SEAT_PING_MS, moduleTicket, moduleURL,
-} from './auth.js?v=0.9.10';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.10';
+} from './auth.js?v=0.9.11';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.11';
 
 /*
   Код просмотра НЕ лежит рядом файлом. Браузерная версия считает снимок сама,
@@ -43,7 +43,7 @@ async function loadViewer() {
   return V;
 }
 
-const VERSION = '0.9.10';
+const VERSION = '0.9.11';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
 
