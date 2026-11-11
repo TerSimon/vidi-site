@@ -18,8 +18,21 @@ const DATA_BASE = new URL('../data/v3/', import.meta.url).href;
   document.head.appendChild(l);
 }
 
-const MOBILE_QUERY = '(max-width: 760px)';
-const HINT_KEY = 'vidi-demo-hint-closed';
+// Граница телефона — как в Vidi Web.
+const MOBILE_QUERY = '(max-width: 720px)';
+
+// Подписи кнопок бара в окне «?» — как в Vidi Web (`app.js`, TOOL_HELP).
+const TOOL_HELP = {
+  layout: 'Одна проекция во весь экран или три сразу: выбранная вкладкой — крупно сверху, две другие под ней.',
+  window: 'Яркость и контраст: ведите по снимку вправо — шире окно, вверх — светлее.',
+  slab: 'Толщина слоя: 0 → 3 → 5 → 10 → 20 мм. В толстом слое видно самое плотное.',
+  ruler: 'Два касания — расстояние в миллиметрах.',
+  angle: 'Три касания — угол, вершина во второй точке.',
+  pencil: 'Рисуйте по срезу. Линия видна только на своём срезе.',
+  erase: 'Убрать измерения и линии. Нажмите дважды: первое нажатие взводит кнопку.',
+  reset: 'Вернуть увеличение, сдвиг, наклон и окно. Разметку не трогает.',
+};
+const SLAB_STEPS = [0, 3, 5, 10, 20];
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -113,11 +126,9 @@ class App {
     this.ready = true;
     this.viewer.classList.add('is-ready');
     $('#loader').hidden = true;
-    let hintClosed = false;
-    try { hintClosed = localStorage.getItem(HINT_KEY) === '1'; } catch { /* приватный режим */ }
-    $('#hint').hidden = hintClosed;
     this.invalidate3D();
-    this.updateHDButton();
+    // Снимок 0.4 мм догружается сам и на телефоне: 7 МБ — как одна фотография.
+    // Кнопки «HD» больше нет — в Vidi Web её тоже нет.
     if (this.shouldAutoHD()) this.loadHD();
   }
 
@@ -143,8 +154,9 @@ class App {
       tool: 'nav',
       measurements: [],
       draft: null,
-      layout: 'grid',
+      layoutChoice: null, // 'one' | 'three'; null — по ширине экрана, как в Vidi Web
       focus: 'axial',
+      main: 'axial',      // последняя проекция среза — к ней «3» вернётся из 3D
       three: {
         mode: 'teeth',
         lastView: 'front',
@@ -180,7 +192,7 @@ class App {
   shouldAutoHD() {
     const conn = navigator.connection;
     if (conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || ''))) return false;
-    return !this.isTouch && window.innerWidth >= 1024 && this.renderer.maxTexture3D >= 400;
+    return this.renderer.maxTexture3D >= 400;
   }
 
   async loadHD() {
@@ -188,13 +200,8 @@ class App {
     if (!hi || this.hd === 'loading' || this.hd === 'done') return;
     if (this.renderer.maxTexture3D < Math.max(...hi.dims)) return;
     this.hd = 'loading';
-    this.hdProgress = 0;
-    this.updateHDButton();
     try {
-      const bytes = await fetchLevel(DATA_BASE, hi, (p) => {
-        this.hdProgress = p;
-        this.updateHDButton();
-      });
+      const bytes = await fetchLevel(DATA_BASE, hi, () => {});
       this.renderer.setVolume(bytes, hi.dims);
       this.level = hi;
       this.state.size = hi.dims.map((d, i) => d * hi.spacing[i]);
@@ -203,30 +210,6 @@ class App {
     } catch (err) {
       console.error(err);
       this.hd = 'error';
-    }
-    this.updateHDButton();
-  }
-
-  updateHDButton() {
-    const btn = $('#hd-btn');
-    if (!btn || !this.manifest) return;
-    const hi = this.manifest.levels.find((l) => l.name === 'hi');
-    const label = $('.hd-label', btn);
-    btn.dataset.state = this.hd;
-    btn.disabled = this.hd === 'loading' || this.hd === 'done';
-    if (this.hd === 'idle') {
-      label.textContent = `HD · ${fmtMB(hi.bytes)}`;
-      btn.title = 'Загрузить снимок в высоком разрешении (0.4 мм)';
-    } else if (this.hd === 'loading') {
-      label.textContent = `HD ${Math.round(this.hdProgress * 100)} %`;
-      btn.title = 'Загружается снимок в высоком разрешении';
-    } else if (this.hd === 'done') {
-      label.textContent = 'HD';
-      btn.title = 'Снимок в высоком разрешении (0.4 мм)';
-    } else {
-      label.textContent = 'HD — повторить';
-      btn.disabled = false;
-      this.hd = 'idle';
     }
   }
 
@@ -287,35 +270,141 @@ class App {
 
   // ------------------------------------------------------------ state actions
 
-  focusPane(key) {
-    this.state.focus = key;
-    $$('.pane', this.panesEl).forEach((p) => p.classList.toggle('is-focus', p.dataset.pane === key));
-    $$('[data-pane-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.paneTab === key)));
+  // Раскладка — как в Vidi Web (`viewer.js`, applyLayout): «1» или «3»; на телефоне
+  // «3» — выбранная проекция сверху, две другие под ней, как в приложении для iPhone.
+
+  narrow() {
+    return this.mobile.matches;
   }
 
-  setLayout(layout, focus) {
-    if (focus) this.focusPane(focus);
-    this.state.layout = layout;
+  currentLayout() {
+    return this.state.layoutChoice ?? (this.narrow() ? 'one' : 'three');
+  }
+
+  /** Что на экране на самом деле: на телефоне в «3» вкладка «3D» показывает объём во весь экран. */
+  shownLayout() {
+    const mode = this.currentLayout();
+    return mode === 'three' && this.narrow() && this.state.focus === 'volume' ? 'one' : mode;
+  }
+
+  focusPane(key) {
+    this.state.focus = key;
+    if (key !== 'volume') this.state.main = key;
+    $$('.pane', this.panesEl).forEach((p) => p.classList.toggle('is-focus', p.dataset.pane === key));
+    $$('[data-pane-tab]').forEach((b) => {
+      const on = b.dataset.paneTab === key;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', String(on));
+    });
+  }
+
+  /** Касание окна. На телефоне в «3» главную выбирает только вкладка: касание малого окна их не переставляет. */
+  touchPane(key) {
+    if (this.narrow() && this.shownLayout() === 'three') return;
+    if (this.state.focus !== key) this.focusPane(key);
+  }
+
+  selectPane(key) {
+    this.focusPane(key);
+    this.applyLayout();
+  }
+
+  toggleLayout() {
+    const st = this.state;
+    if (this.shownLayout() === 'one') {
+      st.layoutChoice = 'three';
+      // Из 3D — к последней проекции среза: объёма среди трёх проекций на телефоне нет.
+      if (this.narrow() && st.focus === 'volume') this.focusPane(st.main);
+    } else {
+      st.layoutChoice = 'one';
+    }
     this.applyLayout();
   }
 
   applyLayout() {
     const st = this.state;
     if (!st) return;
-    const single = this.mobile.matches || st.layout === 'single';
-    this.panesEl.dataset.layout = single ? 'single' : 'grid';
+    const shown = this.shownLayout();
+    this.panesEl.dataset.layout = shown === 'one' ? 'single' : (this.narrow() ? 'three' : 'grid');
+    document.body.classList.toggle('layout-one', shown === 'one');
+    document.body.classList.toggle('layout-three', shown === 'three');
     this.focusPane(st.focus);
-    const btn = $('#layout-btn');
-    if (btn) btn.setAttribute('aria-pressed', String(st.layout === 'single'));
+    const btn = $('.tool[data-tool="layout"]');
+    if (btn) {
+      const target = shown === 'one' ? 'three' : 'one';
+      btn.dataset.target = target;
+      btn.setAttribute('aria-label', target === 'three' ? 'Три проекции' : 'Одна проекция');
+    }
     this.invalidate3D();
+  }
+
+  /** Кнопка бара: инструмент включается и выключается повторным нажатием, как в Vidi Web. */
+  useTool(name) {
+    if (!this.ready) return;
+    if (name !== 'erase') this.disarmErase();
+    if (name === 'layout') { this.toggleLayout(); return; }
+    if (name === 'reset') { this.resetView(); return; }
+    if (name === 'slab') {
+      const at = SLAB_STEPS.indexOf(this.state.thick);
+      this.setThickness(SLAB_STEPS[(at + 1) % SLAB_STEPS.length]);
+      return;
+    }
+    if (name === 'erase') { this.armErase(); return; }
+    this.setTool(this.state.tool === name ? 'nav' : name);
   }
 
   setTool(tool) {
     this.state.tool = tool;
     this.state.draft = null;
-    $$('[data-tool]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tool === tool)));
     this.panesEl.dataset.activeTool = tool;
+    this.updateTools();
     this.invalidate();
+  }
+
+  hasMarkup() {
+    return this.state.measurements.length > 0 || !!this.state.draft;
+  }
+
+  updateTools() {
+    const st = this.state;
+    for (const b of $$('.tool')) {
+      const name = b.dataset.tool;
+      if (name === 'erase') {
+        b.disabled = !this.hasMarkup();
+        b.classList.toggle('is-armed', !b.disabled && !!this.eraseArmed);
+        b.setAttribute('aria-label', this.eraseArmed ? 'Стереть разметку — нажмите ещё раз' : 'Стереть разметку');
+      } else if (name === 'slab') {
+        $('.mm', b).textContent = st.thick ? String(st.thick) : '';
+        b.setAttribute('aria-label', st.thick ? `Толщина слоя ${st.thick} мм` : 'Толщина слоя');
+      } else if (['window', 'ruler', 'angle', 'pencil'].includes(name)) {
+        b.classList.toggle('is-active', st.tool === name);
+        b.setAttribute('aria-pressed', String(st.tool === name));
+      }
+    }
+  }
+
+  /*
+    Удаление разметки — как в Vidi Web: первое нажатие взводит кнопку, второе стирает,
+    через четыре секунды кнопка сама возвращается в исходное.
+  */
+  armErase() {
+    clearTimeout(this.eraseTimer);
+    if (this.eraseArmed) {
+      this.eraseArmed = false;
+      this.clearMeasurements();
+      return;
+    }
+    if (!this.hasMarkup()) return;
+    this.eraseArmed = true;
+    this.eraseTimer = setTimeout(() => this.disarmErase(), 4000);
+    this.updateTools();
+  }
+
+  disarmErase() {
+    clearTimeout(this.eraseTimer);
+    if (!this.eraseArmed) return;
+    this.eraseArmed = false;
+    this.updateTools();
   }
 
   setWindow(center, width) {
@@ -329,8 +418,7 @@ class App {
 
   setThickness(mm) {
     this.state.thick = mm;
-    $$('[data-thick]').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.thick) === mm)));
-    $('#thick-value').textContent = mm ? `MIP ${mm} мм` : 'Срез';
+    this.updateTools();
     this.invalidate();
   }
 
@@ -404,7 +492,7 @@ class App {
     if (d.pts.length === d.need) {
       this.state.measurements.push({ type: d.type, plane: d.plane, n: d.n, pts: d.pts });
       this.state.draft = null;
-      $('#clear-btn').disabled = false;
+      this.updateTools();
     } else {
       d.pts.push([...p]);
     }
@@ -412,13 +500,37 @@ class App {
 
   cancelDraft() {
     this.state.draft = null;
+    this.updateTools();
     this.invalidate();
   }
 
   clearMeasurements() {
     this.state.measurements = [];
     this.state.draft = null;
-    $('#clear-btn').disabled = true;
+    this.updateTools();
+    this.invalidate();
+  }
+
+  // Карандаш — как в Vidi Web: линия по срезу, видна только на своём срезе.
+  beginStroke(pane, p) {
+    this.state.draft = { type: 'stroke', plane: pane.plane, n: pane.basis().n, pts: [p] };
+    this.updateTools();
+    this.invalidate();
+  }
+
+  addStrokePoint(p) {
+    const d = this.state.draft;
+    if (!d || d.type !== 'stroke') return;
+    d.pts.push(p);
+    this.invalidate();
+  }
+
+  endStroke() {
+    const d = this.state.draft;
+    if (!d || d.type !== 'stroke') return;
+    if (d.pts.length > 1) this.state.measurements.push(d);
+    this.state.draft = null;
+    this.updateTools();
     this.invalidate();
   }
 
@@ -431,7 +543,28 @@ class App {
     $$('[data-close]', dlg).forEach((b) => b.addEventListener('click', () => dlg.close()));
     dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 
+    // «?» — значки бара и что они делают, как окно «Управление» в Vidi Web.
+    // Значок копируется из самого бара: поменяли кнопку — подсказка поменялась с ней.
     const help = $('#help-dialog');
+    const list = $('#help-list');
+    for (const btn of $$('#toolbar .tool')) {
+      const text = TOOL_HELP[btn.dataset.tool];
+      if (!text) continue;
+      const row = document.createElement('li');
+      row.className = 'help-row';
+      const icon = document.createElement('span');
+      icon.className = 'help-ico' + (btn.classList.contains('tool-danger') ? ' is-danger' : '');
+      icon.append($('svg', btn).cloneNode(true));
+      const body = document.createElement('div');
+      const name = document.createElement('b');
+      name.textContent = $('.sr-only', btn).textContent;
+      const desc = document.createElement('span');
+      desc.className = 'help-text';
+      desc.textContent = text;
+      body.append(name, desc);
+      row.append(icon, body);
+      list.append(row);
+    }
     $$('[data-help]').forEach((b) => b.addEventListener('click', () => {
       this.closePops();
       help.showModal();
@@ -454,12 +587,6 @@ class App {
     document.addEventListener('click', () => this.closePops());
 
     $('#loader-retry').addEventListener('click', () => location.reload());
-
-    const hint = $('#hint');
-    $('#hint-close').addEventListener('click', () => {
-      hint.hidden = true;
-      try { localStorage.setItem(HINT_KEY, '1'); } catch { /* приватный режим */ }
-    });
   }
 
   closePops() {
@@ -480,93 +607,28 @@ class App {
     else img.removeAttribute('src');
     img.alt = f.title;
     this.closePops();
+    const help = $('#help-dialog');
+    if (help.open) help.close();
     dlg.showModal();
   }
 
   bindViewer() {
-    $$('[data-tool]').forEach((b) => b.addEventListener('click', () => this.setTool(b.dataset.tool)));
-    $$('[data-window]').forEach((b) => {
-      b.hidden = !this.windowPresets.some((w) => w.id === b.dataset.window);
-    });
-    $$('[data-window]').forEach((b) => b.addEventListener('click', () => {
-      const p = this.windowPresets.find((w) => w.id === b.dataset.window);
-      this.setWindow(p.center, p.width);
-    }));
-    $$('[data-thick]').forEach((b) => b.addEventListener('click', () => this.setThickness(Number(b.dataset.thick))));
-    $('#clear-btn').addEventListener('click', () => this.clearMeasurements());
-    $('#reset-btn').addEventListener('click', () => this.resetView());
-    $$('[data-action]').forEach((b) => b.addEventListener('click', () => {
-      this.closePops();
-      if (b.dataset.action === 'reset') this.resetView();
-      else this.clearMeasurements();
-    }));
-    $('#layout-btn').addEventListener('click', () => {
-      this.setLayout(this.state.layout === 'single' ? 'grid' : 'single');
-    });
-    $('#hd-btn').addEventListener('click', () => this.loadHD());
+    $$('#toolbar .tool').forEach((b) => b.addEventListener('click', () => this.useTool(b.dataset.tool)));
+    // Вкладка выбирает проекцию: в «1» — ту, что во весь экран, в «3» — главную, верхнюю.
+    $$('[data-pane-tab]').forEach((b) => b.addEventListener('click', () => this.selectPane(b.dataset.paneTab)));
 
-    $$('.pane-title').forEach((b) => b.addEventListener('click', () => {
-      const key = b.closest('.pane').dataset.pane;
-      const single = this.state.layout === 'single' && this.state.focus === key;
-      this.setLayout(single ? 'grid' : 'single', key);
-    }));
-    $$('[data-pane-tab]').forEach((b) => b.addEventListener('click', () => {
-      this.focusPane(b.dataset.paneTab);
-      this.invalidate3D();
-    }));
-
-    // 3D-тулбар.
-    const modeSel = $('#vol-mode');
-    modeSel.innerHTML = VOLUME_MODES.map((m) => `<option value="${m.id}">${m.label}</option>`).join('');
-    modeSel.value = this.state.three.mode;
-    modeSel.addEventListener('change', () => this.setVolumeMode(modeSel.value));
-
-    const viewsPop = $('#views-pop');
-    viewsPop.innerHTML = Object.entries(VIEWS)
-      .map(([k, v]) => `<button type="button" class="pop-item" data-view="${k}">${v.label}</button>`).join('');
-    $$('[data-view]', viewsPop).forEach((b) => b.addEventListener('click', () => {
+    // Ракурсы 3D — как в Vidi Web.
+    $$('#views .view-btn').forEach((b) => b.addEventListener('click', () => {
       this.state.three.lastView = b.dataset.view;
       this.volumePane.setView(b.dataset.view);
-      this.closePops();
     }));
-
-    const clip = this.state.three.clip;
-    const clipBtn = $('#clip-btn');
-    const axisSel = $('#clip-axis');
-    const range = $('#clip-range');
-    const rangeOut = $('#clip-value');
-    const flip = $('#clip-flip');
-    axisSel.innerHTML = Object.entries(CLIP_AXES).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('');
-    const syncClip = () => {
-      clipBtn.setAttribute('aria-pressed', String(clip.on));
-      axisSel.value = clip.axis;
-      range.value = String(Math.round(clip.pos * 100));
-      rangeOut.textContent = `${Math.round(clip.pos * 100)} %`;
-      $('.vol-clip', this.viewer).classList.toggle('is-on', clip.on);
-      this.invalidate3D();
-    };
-    clipBtn.addEventListener('click', () => { clip.on = !clip.on; syncClip(); });
-    axisSel.addEventListener('change', () => { clip.axis = axisSel.value; clip.on = true; syncClip(); });
-    range.addEventListener('input', () => {
-      clip.pos = Number(range.value) / 100;
-      clip.on = true;
-      this.volumePane.beginInteraction();
-      syncClip();
-    });
-    range.addEventListener('change', () => this.volumePane.endInteraction());
-    flip.addEventListener('click', () => { clip.flip = !clip.flip; clip.on = true; syncClip(); });
-    $('#vol-reset').addEventListener('click', () => {
-      this.state.three.lastView = 'front';
-      this.volumePane.setView('front');
-    });
-    syncClip();
 
     document.addEventListener('keydown', (e) => {
       if (e.target.closest('input, select, textarea') || e.metaKey || e.ctrlKey) return;
       if (e.key === 'Escape') this.cancelDraft();
       else if (e.key === 'Backspace' || e.key === 'Delete') {
         this.state.measurements.pop();
-        $('#clear-btn').disabled = this.state.measurements.length === 0;
+        this.updateTools();
         this.invalidate();
       } else if (e.key === 'v' || e.key === 'V') this.setTool('nav');
       else if (e.key === 'm' || e.key === 'M') this.setTool('ruler');
@@ -576,6 +638,7 @@ class App {
     this.setTool('nav');
     this.setWindow(this.state.window.center, this.state.window.width);
     this.setThickness(0);
+    this.updateTools();
   }
 }
 

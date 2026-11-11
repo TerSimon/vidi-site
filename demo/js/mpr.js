@@ -14,6 +14,13 @@ export const PLANES = {
 export const PLANE_KEYS = ['axial', 'sagittal', 'coronal'];
 
 const MEASURE_COLOR = '#F2C14E'; // --amber: измерение
+const STROKE_COLOR = 'rgba(76,142,255,0.95)'; // карандаш — как в Vidi Web
+const PENCIL_SAMPLE_PX = 1.5; // реже хранить точки без видимых углов линии
+const MOVE_THRESHOLD = 6; // меньше — касание, больше — протяжка
+
+/** Длина линейки масштаба: круглое число не длиннее места под ней — в малом окне
+ *  линейка не наезжает на подпись окна справа. */
+const niceLength = (mm) => [100, 50, 20, 10, 5, 2, 1].find((s) => s <= mm) ?? 1;
 
 /** u — экран вправо, v — экран вниз, n — нормаль. Изображение не вращается вместе с осями. */
 export function basis(planeKey, R) {
@@ -52,9 +59,8 @@ export class MprPane {
     this.gesture = null;
 
     this.svg = el.querySelector('.pane-ov');
-    this.offsetLabel = el.querySelector('.pane-offset');
-    this.scrub = el.querySelector('.pane-scrub');
-    this.scrubThumb = el.querySelector('.pane-scrub-thumb');
+    this.chipValue = el.querySelector('.chip-value');
+    this.chipUnit = el.querySelector('.unit');
     this.surface = el.querySelector('.pane-surface');
 
     this._bind();
@@ -150,13 +156,20 @@ export class MprPane {
       }
     }
 
-    // Буквы сторон по краям.
+    // Буквы сторон — слева и справа посередине, как в Vidi Web.
     const letter = (x, y, t, anchor) =>
       `<text x="${x}" y="${y}" class="ov-side" text-anchor="${anchor}" dominant-baseline="middle">${t}</text>`;
-    parts.push(letter(12, H / 2, sideLetter(scale(u, -1)), 'start'));
-    parts.push(letter(W - 32, H / 2, sideLetter(u), 'end'));
-    parts.push(letter(W / 2 + 12, 40, sideLetter(scale(v, -1)), 'middle'));
-    parts.push(letter(W / 2 + 12, H - 14, sideLetter(v), 'middle'));
+    parts.push(letter(8, H / 2, sideLetter(scale(u, -1)), 'start'));
+    parts.push(letter(W - 8, H / 2, sideLetter(u), 'end'));
+
+    // Линейка масштаба слева внизу и окно справа внизу — как в Vidi Web.
+    const pmm = this.pixelMM();
+    const mm = niceLength(Math.min(W * 0.25, 80) * pmm);
+    const px = mm / pmm;
+    const bx = 7, by = H - 9;
+    parts.push(`<path d="M${bx} ${by}H${bx + px}M${bx} ${by - 4}V${by + 4}M${bx + px} ${by - 4}V${by + 4}" stroke="rgba(255,255,255,.7)" stroke-width="1" fill="none"/>`);
+    parts.push(`<text x="${bx + px / 2}" y="${by - 6}" class="ov-label" text-anchor="middle">${mm} мм</text>`);
+    parts.push(`<text x="${W - 7}" y="${H - 7}" class="ov-label" text-anchor="end" opacity=".8">окно ${Math.round(st.window.width)} · центр ${Math.round(st.window.center)}</text>`);
 
     // Измерения текущего среза.
     for (const m of this.app.visibleMeasurements(this)) parts.push(this._measureSVG(m, false));
@@ -165,18 +178,21 @@ export class MprPane {
     this.svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     this.svg.innerHTML = parts.join('');
 
-    // Смещение среза от центра объёма — как подпись справа сверху в приложении.
+    // Смещение среза от центра объёма — в чипе проекции, как в Vidi Web.
+    // Минус — настоящий, а не дефис: одной ширины с цифрами в моноширинном наборе.
     const volC = scale(st.size, 0.5);
     const off = dot(sub(st.crosshair, volC), n);
-    this.offsetLabel.textContent = `${off.toFixed(1)} мм`;
-
-    const ext = extentAlong(n, st.size);
-    const f = clamp(0.5 - off / ext, 0, 1);
-    this.scrubThumb.style.top = `${f * 100}%`;
+    this.chipValue.textContent = (off < 0 ? '−' : '') + Math.abs(off).toFixed(1);
+    this.chipUnit.textContent = 'мм';
   }
 
   _measureSVG(m, draft) {
     const pts = m.pts.map((p) => this.worldToScreen(p));
+    if (m.type === 'stroke') {
+      if (pts.length === 1) return `<circle cx="${pts[0][0]}" cy="${pts[0][1]}" r="1.4" fill="${STROKE_COLOR}"/>`;
+      const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join('');
+      return `<path d="${d}" fill="none" stroke="${STROKE_COLOR}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }
     const col = MEASURE_COLOR;
     const out = [];
     const dash = draft ? ' stroke-dasharray="4 3"' : '';
@@ -287,7 +303,7 @@ export class MprPane {
     const el = this.surface;
     el.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    // Колесо слушаем на всём пейне: над ползунком срезов оно тоже листает.
+    // Колесо слушаем на всём окне.
     this.el.addEventListener('wheel', (e) => {
       if (!this.app.ready) return;
       e.preventDefault();
@@ -331,33 +347,6 @@ export class MprPane {
       });
     }
 
-    // Ползунок срезов (главный способ листать на телефоне).
-    const scrubMove = (e) => {
-      const r = this.scrub.getBoundingClientRect();
-      const f = clamp((e.clientY - r.top) / r.height, 0, 1);
-      const st = this.s;
-      const { n } = this.basis();
-      const ext = extentAlong(n, st.size);
-      const volC = scale(st.size, 0.5);
-      const off = dot(sub(st.crosshair, volC), n);
-      this.scrollSlice((0.5 - f) * ext - off);
-    };
-    this.scrub.addEventListener('pointerdown', (e) => {
-      if (!this.app.ready) return;
-      e.stopPropagation();
-      capturePointer(this.scrub, e.pointerId);
-      this.scrub.classList.add('is-active');
-      scrubMove(e);
-    });
-    this.scrub.addEventListener('pointermove', (e) => {
-      if (this.scrub.hasPointerCapture(e.pointerId)) scrubMove(e);
-    });
-    const scrubEnd = (e) => {
-      if (this.scrub.hasPointerCapture(e.pointerId)) this.scrub.releasePointerCapture(e.pointerId);
-      this.scrub.classList.remove('is-active');
-    };
-    this.scrub.addEventListener('pointerup', scrubEnd);
-    this.scrub.addEventListener('pointercancel', scrubEnd);
   }
 
   _down(e) {
@@ -366,11 +355,11 @@ export class MprPane {
     capturePointer(el, e.pointerId);
     const [x, y] = this._local(e);
     this.pointers.set(e.pointerId, { x, y });
-    this.app.focusPane(this.plane);
+    this.app.touchPane(this.plane);
 
     if (this.pointers.size === 2) {
       // Второй палец: пинч + сдвиг. Начатое одним пальцем действие отменяем.
-      if (this.gesture && this.gesture.kind === 'measure') this.app.cancelDraft();
+      if (this.gesture && (this.gesture.kind === 'measure' || this.gesture.kind === 'pencil')) this.app.cancelDraft();
       const [a, b] = [...this.pointers.values()];
       this.gesture = {
         kind: 'pinch',
@@ -392,8 +381,20 @@ export class MprPane {
       return;
     }
 
+    const mouse = e.pointerType === 'mouse';
+    if (st.tool === 'window') {
+      // Как в Vidi Web: вправо — шире окно, вверх — светлее.
+      const k = mouse ? 4 : 4 * Math.min(window.devicePixelRatio || 1, 2);
+      this.gesture = { kind: 'windowTool', start: [x, y], look: { ...st.window }, k };
+      return;
+    }
+    if (st.tool === 'pencil') {
+      this.gesture = { kind: 'pencil', last: [x, y] };
+      this.app.beginStroke(this, this.screenToWorld(x, y));
+      return;
+    }
     if (st.tool === 'nav') {
-      const tol = e.pointerType === 'touch' ? 24 : 12;
+      const tol = mouse ? 12 : 24;
       const hit = (this.handles || []).find((h) => Math.hypot(h.x - x, h.y - y) <= tol);
       if (hit) {
         const cs = this.worldToScreen(st.crosshair);
@@ -401,12 +402,20 @@ export class MprPane {
         this.app.invalidate();
         return;
       }
-      this.gesture = { kind: 'crosshair', start: [x, y], moved: false };
-      this.setCrosshair(this.screenToWorld(x, y));
+      if (mouse) {
+        this.gesture = { kind: 'crosshair', start: [x, y], moved: false };
+        this.setCrosshair(this.screenToWorld(x, y));
+        return;
+      }
+    }
+    if (!mouse) {
+      // Палец — как в Vidi Web: касание ставит перекрестие или точку измерения,
+      // протяжка листает срезы в любом инструменте; двигают снимок двумя пальцами.
+      this.gesture = { kind: 'tap', start: [x, y], moved: false, from: [...st.crosshair] };
       return;
     }
 
-    // Линейка / угол.
+    // Линейка / угол мышью.
     this.gesture = { kind: 'measure', start: [x, y], moved: false };
     this.app.measurePointerDown(this, this.screenToWorld(x, y));
   }
@@ -459,6 +468,26 @@ export class MprPane {
         g.moved = true;
         this.setCrosshair(this.screenToWorld(x, y));
         break;
+      case 'windowTool': {
+        const ddx = x - g.start[0], ddy = y - g.start[1];
+        this.app.setWindow(g.look.center - ddy * g.k, Math.max(50, g.look.width + ddx * g.k));
+        break;
+      }
+      case 'pencil':
+        if (Math.hypot(x - g.last[0], y - g.last[1]) < PENCIL_SAMPLE_PX) break;
+        g.last = [x, y];
+        this.app.addStrokePoint(this.screenToWorld(x, y));
+        break;
+      case 'tap': {
+        const ddy = y - g.start[1];
+        if (!g.moved && Math.hypot(x - g.start[0], ddy) < MOVE_THRESHOLD) break;
+        g.moved = true;
+        // Полное движение по окну сверху вниз — весь объём, как в Vidi Web.
+        const { n } = this.basis();
+        const per = extentAlong(n, this.s.size) / Math.max(1, this.H * 0.9);
+        this.setCrosshair(addScaled(g.from, n, ddy * per));
+        break;
+      }
       case 'measure':
         if (Math.hypot(x - g.start[0], y - g.start[1]) > 6) g.moved = true;
         this.app.measureHover(this, this.screenToWorld(x, y));
@@ -483,6 +512,15 @@ export class MprPane {
     if (g.kind === 'measure' && !cancelled) {
       const [x, y] = this._local(e);
       this.app.measurePointerUp(this, this.screenToWorld(x, y), g.moved);
+    }
+    if (g.kind === 'pencil') {
+      if (cancelled) this.app.cancelDraft();
+      else this.app.endStroke();
+    }
+    if (g.kind === 'tap' && !g.moved && !cancelled) {
+      const p = this.screenToWorld(...this._local(e));
+      if (this.s.tool === 'ruler' || this.s.tool === 'angle') this.app.measurePointerDown(this, p);
+      else this.setCrosshair(p);
     }
     this.gesture = null;
     if (g.kind === 'rotate') this.app.invalidate();

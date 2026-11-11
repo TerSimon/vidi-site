@@ -227,7 +227,7 @@ export class VolumePane {
       capturePointer(el, e.pointerId);
       const [x, y] = this._local(e);
       this.pointers.set(e.pointerId, { x, y });
-      this.app.focusPane('volume');
+      this.app.touchPane('volume');
       if (this.pointers.size === 2) {
         const [a, b] = [...this.pointers.values()];
         this.gesture = { kind: 'pinch', dist: Math.hypot(a.x - b.x, a.y - b.y), mid: [(a.x + b.x) / 2, (a.y + b.y) / 2] };
