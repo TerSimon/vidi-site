@@ -469,8 +469,9 @@ export class MprPane {
         this.setCrosshair(this.screenToWorld(x, y));
         break;
       case 'windowTool': {
+        // Вверх — светлее: центр окна опускается.
         const ddx = x - g.start[0], ddy = y - g.start[1];
-        this.app.setWindow(g.look.center - ddy * g.k, Math.max(50, g.look.width + ddx * g.k));
+        this.app.setWindow(g.look.center + ddy * g.k, Math.max(50, g.look.width + ddx * g.k));
         break;
       }
       case 'pencil':
