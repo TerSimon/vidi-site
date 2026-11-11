@@ -23,7 +23,7 @@ if (location.pathname === '/app/') {
   }, { once: true });
 }
 </script>
-<link rel="stylesheet" href="app.css?v=0.9.11">
+<link rel="stylesheet" href="app.css?v=0.9.12">
 </head>
 <body>
 
@@ -69,6 +69,7 @@ if (location.pathname === '/app/') {
 
       <button class="btn btn-primary" id="login-submit" type="submit">Войти</button>
       <p class="notice" id="login-notice" hidden></p>
+      <p class="hint">Вход в другом браузере завершит предыдущий сеанс Vidi Web. Число смен браузера не ограничено.</p>
       <p class="hint">Код выдаёт бот <a href="https://t.me/vidivieverbot" target="_blank" rel="noopener">@vidivieverbot</a> — тот же, что для приложения на Mac. <a href="/spravka.html" target="_blank" rel="noopener">Справка</a>.</p>
     </form>
 
@@ -125,7 +126,7 @@ if (location.pathname === '/app/') {
         <dt>Подписка до</dt><dd id="account-paid"></dd>
       </dl>
       <button class="btn" id="btn-signout" type="button">Выйти</button>
-      <p class="hint">Выход освобождает привязку браузера и считается сбросом: их не больше двух в месяц.</p>
+      <p class="hint">После выхода можно снова войти здесь или в другом браузере. Число входов и выходов не ограничено.</p>
       <p class="notice" id="signout-notice" hidden></p>
     </div>
 
@@ -348,6 +349,6 @@ if (location.pathname === '/app/') {
   </div>
 </div>
 
-<script type="module" src="app.js?v=0.9.11"></script>
+<script type="module" src="app.js?v=0.9.12"></script>
 </body>
 </html>

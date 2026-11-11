@@ -12,8 +12,8 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, SEAT_PING_MS, moduleTicket, moduleURL,
-} from './auth.js?v=0.9.11';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.11';
+} from './auth.js?v=0.9.12';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.12';
 
 /*
   Код просмотра НЕ лежит рядом файлом. Браузерная версия считает снимок сама,
@@ -43,7 +43,7 @@ async function loadViewer() {
   return V;
 }
 
-const VERSION = '0.9.11';
+const VERSION = '0.9.12';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
 
@@ -70,22 +70,6 @@ function formatDate(iso) {
   // Убираем хвост «г.»: дальше в предложении идёт точка, и получалось «2025 г..».
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
     .replace(/\s*г\.\s*$/, '');
-}
-
-/**
- * Когда устройство заходило в последний раз. Точное время сегодняшнего входа
- * отвечает на главный вопрос врача: это я сам полчаса назад или кто-то другой.
- */
-function whenSeen(iso) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-  const day = new Date(d); day.setHours(0, 0, 0, 0);
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const days = Math.round((today - day) / 86400000);
-  if (days === 0) return 'сегодня в ' + time;
-  if (days === 1) return 'вчера в ' + time;
-  return formatDate(iso);
 }
 
 // ─── Ошибки ────────────────────────────────────────────────────────────────
@@ -144,8 +128,8 @@ function showScreen(name) {
  * трёхмерную текстуру целиком, и предел меньше 512 означает, что 3D и наклон
  * осей на этом устройстве не получатся.
  *
- * Память браузера здесь тоже не ради полноты: без неё каждое открытие страницы
- * станет новым устройством, а браузерный слот у подписки один.
+ * Память браузера здесь тоже не ради полноты: без неё при каждом открытии
+ * страницы врачу придётся снова вводить почту и код.
  */
 function checkEnvironment() {
   const rows = [];
@@ -212,9 +196,9 @@ function renderEnvironment() {
   const hint = $('env-hint');
   if (blocking === 'ENV-STORE') {
     // Отдельный текст: дело не в старом браузере, а в приватном окне или
-    // запрете данных сайта. Пускать сюда нельзя — вход привяжется и тут же
-    // забудется, а браузерный слот у подписки один.
-    hint.textContent = 'Браузер не сохраняет вход — обычно это приватное окно или запрет данных сайта. Откройте Vidi в обычном окне, иначе вход придётся привязывать заново каждый раз. Код ENV-STORE.';
+    // запрете данных сайта. Пускать сюда нельзя — выданный токен тут же
+    // забудется и после перезагрузки понадобится повторный вход.
+    hint.textContent = 'Браузер не сохраняет вход — обычно это приватное окно или запрет данных сайта. Откройте Vidi в обычном окне, иначе входить придётся заново каждый раз. Код ENV-STORE.';
     hint.hidden = false;
     $('login-submit').disabled = true;
   } else if (blocking) {
@@ -271,19 +255,7 @@ loginForm.addEventListener('submit', async (e) => {
       setNotice(loginNotice, 'Такой почты нет. Проверьте адрес или зарегистрируйтесь в боте.');
       break;
     case 'deviceLimit': {
-      // Чаще всего сюда упирается не чужой браузер, а свой же: Safari очистил
-      // данные сайта, вход потерялся, и тот же телефон пришёл под новым
-      // номером. Поэтому называем, кто держит слот и когда заходил — иначе
-      // отказ выглядит так, будто подписку кто-то занял.
-      const who = r.bound
-        ? 'Занят: ' + r.bound.name +
-          (r.bound.lastSeen ? ', заходил ' + whenSeen(r.bound.lastSeen) : '') + '. '
-        : '';
-      setNotice(loginNotice, 'К этой подписке уже привязан другой браузер. ' + who +
-        'Отвяжите его кнопкой в боте — ' +
-        (r.resetsLeft > 0
-          ? 'осталось ' + r.resetsLeft + ' ' + plural(r.resetsLeft, 'сброс', 'сброса', 'сбросов') + ' в этом месяце.'
-          : 'сбросы в этом месяце закончились.'));
+      setNotice(loginNotice, 'Сервер пока не разрешил вход в этот браузер. Обновите страницу и повторите. Если ошибка останется, напишите в поддержку.');
       break;
     }
     case 'tooManyAttempts': {
@@ -323,12 +295,7 @@ $('blocked-signout').addEventListener('click', async () => {
   btn.disabled = true;
   const r = await signOut();
   btn.disabled = false;
-  if (r.result === 'resetLimit') {
-    $('blocked-text').textContent = r.retryAfterDays
-      ? `Сбросы закончились: следующий через ${r.retryAfterDays} ${plural(r.retryAfterDays, 'день', 'дня', 'дней')}. Выйти сейчас нельзя.`
-      : 'Сбросы в этом месяце закончились. Выйти сейчас нельзя.';
-    return;
-  }
+  if (r.result === 'superseded') { boot(); return; }
   // Выход не прошёл — вход остался в браузере. Показать форму входа значило
   // бы соврать: врач решит, что вышел, а при следующем открытии окажется
   // внутри.
@@ -336,9 +303,8 @@ $('blocked-signout').addEventListener('click', async () => {
     $('blocked-text').textContent = 'Нет связи с сервером — выйти не получилось. Проверьте интернет и попробуйте ещё раз.';
     return;
   }
-  // Непонятный ответ сервера по-прежнему ведёт к форме входа: это выход из
-  // тупика, когда вход в браузере испорчен, — повторный вход его перезапишет.
-  showLogin();
+  if (r.result === 'ok') { showLogin(); return; }
+  $('blocked-text').textContent = 'Не получилось выйти. Попробуйте ещё раз.';
 });
 
 // ─── Сессия ────────────────────────────────────────────────────────────────
@@ -365,12 +331,7 @@ $('btn-signout').addEventListener('click', async () => {
   btn.disabled = false;
 
   if (r.result === 'ok') { showLogin(); return; }
-  if (r.result === 'resetLimit') {
-    setNotice($('signout-notice'), r.retryAfterDays
-      ? `Сбросы закончились: следующий через ${r.retryAfterDays} ${plural(r.retryAfterDays, 'день', 'дня', 'дней')}.`
-      : 'Сбросы в этом месяце закончились.');
-    return;
-  }
+  if (r.result === 'superseded') { boot(); return; }
   if (r.result === 'network') {
     setNotice($('signout-notice'), 'Нет связи с сервером. Попробуйте позже.');
     return;
@@ -426,8 +387,13 @@ async function pingSeat({ claim = false } = {}) {
       break;
     case 'revoked':
       stopSeat();
-      showBlocked('Браузер отвязан',
-        'Эту привязку сняли — в боте или на другом устройстве. Войдите заново.');
+      showBlocked('Вход в этом браузере завершён',
+        'В аккаунт вошли в другом браузере или этот сеанс был завершён. Чтобы продолжить здесь, войдите заново.');
+      break;
+    case 'signedOut':
+      showLogin();
+      break;
+    case 'superseded':
       break;
     case 'offline':
       seatFailures += 1;
@@ -883,6 +849,9 @@ async function boot() {
     case 'ok':
       startSession();
       break;
+    case 'superseded':
+      boot();
+      break;
     case 'expired':
       showBlocked('Подписка не активна',
         r.paidUntil
@@ -891,7 +860,7 @@ async function boot() {
       break;
     case 'revoked':
       showLogin();
-      setNotice(loginNotice, 'Привязку этого браузера сняли. Войдите заново.');
+      setNotice(loginNotice, 'Вход в этом браузере завершён. Чтобы продолжить здесь, войдите заново.');
       break;
     case 'offline':
       showBlocked('Нет связи с сервером',
