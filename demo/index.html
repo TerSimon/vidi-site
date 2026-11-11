@@ -19,22 +19,22 @@
 <link rel="icon" href="../favicon.ico" sizes="32x32" />
 <link rel="icon" href="../assets/icon.png" type="image/png" sizes="180x180" />
 <link rel="apple-touch-icon" href="../assets/icon.png" />
-<link rel="stylesheet" href="demo.css?v=2026-09-14-ds3" />
+<link rel="stylesheet" href="demo.css?v=2026-11-11-web" />
 <!-- Версия файлов демо. Менять во всех строках ниже при каждом обновлении js/css,
      иначе браузер может смешать новые модули со старыми из кэша и демо не запустится. -->
 <script type="importmap">
 {
   "imports": {
-    "./js/vec.js": "./js/vec.js?v=2026-09-14-ds3",
-    "./js/presets.js": "./js/presets.js?v=2026-09-14-ds3",
-    "./js/loader.js": "./js/loader.js?v=2026-09-14-ds3",
-    "./js/renderer.js": "./js/renderer.js?v=2026-09-14-ds3",
-    "./js/mpr.js": "./js/mpr.js?v=2026-09-14-ds3",
-    "./js/view3d.js": "./js/view3d.js?v=2026-09-14-ds3"
+    "./js/vec.js": "./js/vec.js?v=2026-11-11-web",
+    "./js/presets.js": "./js/presets.js?v=2026-11-11-web",
+    "./js/loader.js": "./js/loader.js?v=2026-11-11-web",
+    "./js/renderer.js": "./js/renderer.js?v=2026-11-11-web",
+    "./js/mpr.js": "./js/mpr.js?v=2026-11-11-web",
+    "./js/view3d.js": "./js/view3d.js?v=2026-11-11-web"
   }
 }
 </script>
-<script type="module" src="js/main.js?v=2026-10-14-purpose"></script>
+<script type="module" src="js/main.js?v=2026-11-11-web"></script>
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
     (function(m,e,t,r,i,k,a){
@@ -73,157 +73,66 @@
   </defs>
 </svg>
 
-<header class="d-head">
-  <a class="d-brand" href="../" aria-label="Vidi — на главную">
-    <img src="../assets/icon-60.webp" alt="" width="28" height="28" />
-    <span>Vidi</span>
+<!-- Вид — как у Vidi Web (`Сайт/vidi-web/app`): шапка, вкладки проекций, окна, бар инструментов внизу.
+     «Задача 30», 11.11.2026. Прежний вид — ~/Desktop/Vidi-stage-builds/demo-before-web-look-20261111/. -->
+<header class="topbar">
+  <a class="icon-btn" href="../" aria-label="Vidi — на главную">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
   </a>
-  <span class="d-badge">Веб-демо</span>
-  <span class="d-study">Демонстрационное КЛКТ</span>
-  <div class="d-head-spacer"></div>
-  <button class="d-link" type="button" data-feature="own">Открыть свой снимок</button>
+  <div class="viewer-brand"><img class="brand-icon" src="../assets/icon-60.webp" alt="" width="24" height="24" />Vidi Web<span class="demo-badge">демо</span></div>
   <a class="d-btn d-btn-primary desktop-only" href="https://storage.yandexcloud.net/videviewergmd/Vidi-2.1.7.dmg" data-evt="demo_download"><svg aria-hidden="true"><use href="#i-apple"/></svg>Скачать для Mac</a>
   <a class="d-btn d-btn-ghost desktop-only" href="https://t.me/vidivieverbot" data-evt="demo_subscribe"><svg aria-hidden="true"><use href="#i-tg"/></svg>Подписка</a>
   <a class="d-btn d-btn-primary touch-only" href="https://t.me/vidivieverbot" data-evt="demo_tg_mobile"><svg aria-hidden="true"><use href="#i-tg"/></svg>Vidi для Mac</a>
+  <button class="info-btn" type="button" data-help aria-haspopup="dialog" aria-label="Что делают кнопки"><span class="info-mark" aria-hidden="true">?</span></button>
 </header>
 
-<div class="d-toolbar" role="toolbar" aria-label="Инструменты">
-  <div class="tb-group" role="group" aria-label="Режим мыши">
-    <button class="tb-btn" type="button" data-tool="nav" aria-pressed="true" title="Навигация — перекрестие и наклон осей (V)"><svg><use href="#i-nav"/></svg><span class="tb-label">Навигация</span></button>
-    <button class="tb-btn" type="button" data-tool="ruler" aria-pressed="false" title="Линейка (M)"><svg><use href="#i-ruler"/></svg><span class="tb-label">Линейка</span></button>
-    <button class="tb-btn" type="button" data-tool="angle" aria-pressed="false" title="Угол (A)"><svg><use href="#i-angle"/></svg><span class="tb-label">Угол</span></button>
+<!-- Вкладки: на телефоне всегда, на компьютере — когда видна одна проекция. -->
+<nav class="planes" id="planes" aria-label="Проекции">
+  <div class="planes-pill" role="tablist">
+    <button class="plane-tab is-active" role="tab" type="button" data-pane-tab="axial" aria-selected="true" style="--plane: var(--plane-axial)"><span class="dot"></span>Axial</button>
+    <button class="plane-tab" role="tab" type="button" data-pane-tab="sagittal" aria-selected="false" style="--plane: var(--plane-sagittal)"><span class="dot"></span>Sagittal</button>
+    <button class="plane-tab" role="tab" type="button" data-pane-tab="coronal" aria-selected="false" style="--plane: var(--plane-coronal)"><span class="dot"></span>Coronal</button>
+    <button class="plane-tab" role="tab" type="button" data-pane-tab="volume" aria-selected="false" style="--plane: var(--plane-neutral)"><span class="dot"></span>3D</button>
   </div>
-
-  <div class="tb-group tb-rel">
-    <button class="tb-btn" type="button" data-pop="image-pop" aria-expanded="false" aria-haspopup="true" title="Окно и толщина слоя"><svg><use href="#i-sliders"/></svg><span class="tb-label">Изображение</span><svg class="tb-chev"><use href="#i-chevron"/></svg></button>
-    <div class="pop" id="image-pop" hidden>
-      <div class="pop-title">Окно</div>
-      <div class="pop-row">
-        <button type="button" class="chip" data-window="dicom" aria-pressed="false" hidden>Как в снимке</button>
-        <button type="button" class="chip" data-window="bone" aria-pressed="false">Кость</button>
-        <button type="button" class="chip" data-window="teeth" aria-pressed="false">Зубы</button>
-        <button type="button" class="chip" data-window="soft" aria-pressed="false">Мягкие ткани</button>
-      </div>
-      <p class="pop-note mouse-only">Правая кнопка мыши + движение — яркость и контраст.</p>
-      <div class="pop-title">Толщина слоя <span class="pop-value" id="thick-value">Срез</span></div>
-      <div class="pop-row">
-        <button type="button" class="chip" data-thick="0" aria-pressed="true">0</button>
-        <button type="button" class="chip" data-thick="3" aria-pressed="false">3 мм</button>
-        <button type="button" class="chip" data-thick="5" aria-pressed="false">5 мм</button>
-        <button type="button" class="chip" data-thick="10" aria-pressed="false">10 мм</button>
-        <button type="button" class="chip" data-thick="20" aria-pressed="false">20 мм</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="tb-group tb-edit">
-    <button class="tb-btn" type="button" id="clear-btn" disabled title="Удалить измерения"><svg><use href="#i-trash"/></svg></button>
-    <button class="tb-btn" type="button" id="reset-btn" title="Сбросить вид"><svg><use href="#i-reset"/></svg></button>
-    <button class="tb-btn desktop-grid-only" type="button" id="layout-btn" aria-pressed="false" title="Одно окно / четыре окна"><svg><use href="#i-layout"/></svg></button>
-  </div>
-
-  <div class="tb-tabs" role="tablist" aria-label="Проекция">
-    <button type="button" role="tab" data-pane-tab="axial" aria-selected="true" style="--c:#4C8EFF">Axial</button>
-    <button type="button" role="tab" data-pane-tab="sagittal" aria-selected="false" style="--c:#FF6B6B">Sagittal</button>
-    <button type="button" role="tab" data-pane-tab="coronal" aria-selected="false" style="--c:#4ED17E">Coronal</button>
-    <button type="button" role="tab" data-pane-tab="volume" aria-selected="false" style="--c:#B9C2D0">3D</button>
-  </div>
-
-  <div class="tb-spacer"></div>
-
-  <div class="tb-locked" aria-label="Доступно в приложении для Mac">
-    <span class="tb-locked-label">В приложении:</span>
-    <button type="button" class="lock-chip" data-feature="pano"><svg><use href="#i-lock"/></svg>Панорама</button>
-    <button type="button" class="lock-chip" data-feature="canal"><svg><use href="#i-lock"/></svg>Канал</button>
-    <button type="button" class="lock-chip" data-feature="implant"><svg><use href="#i-lock"/></svg>Модели имплантов</button>
-    <button type="button" class="lock-chip" data-feature="report"><svg><use href="#i-lock"/></svg>PDF-иллюстрации</button>
-  </div>
-
-  <div class="tb-group tb-rel tb-more">
-    <button class="tb-btn" type="button" data-pop="more-pop" aria-expanded="false" aria-haspopup="true" title="Ещё в приложении"><svg><use href="#i-lock"/></svg><span class="tb-label">Ещё</span></button>
-    <div class="pop pop-right" id="more-pop" hidden>
-      <div class="pop-mobile">
-        <button type="button" class="pop-item" data-action="reset">Сбросить вид</button>
-        <button type="button" class="pop-item" data-action="clear">Удалить измерения</button>
-        <button type="button" class="pop-item" data-help>Как управлять</button>
-      </div>
-      <div class="pop-title">Только в Vidi для Mac</div>
-      <button type="button" class="pop-item" data-feature="pano">Панорама из КЛКТ</button>
-      <button type="button" class="pop-item" data-feature="canal">Разметка канала</button>
-      <button type="button" class="pop-item" data-feature="implant">Виртуальные модели имплантов</button>
-      <button type="button" class="pop-item" data-feature="report">PDF-иллюстрации</button>
-      <button type="button" class="pop-item" data-feature="own">Свои снимки из архива</button>
-    </div>
-  </div>
-
-  <button class="tb-btn tb-hd" type="button" id="hd-btn" data-state="idle" title="Высокое разрешение"><span class="hd-dot"></span><span class="hd-label">HD</span></button>
-  <button class="tb-btn tb-help" type="button" data-help title="Как управлять"><svg><use href="#i-help"/></svg></button>
-</div>
+</nav>
 
 <main class="d-viewer" id="viewer">
   <canvas id="gl" aria-hidden="true"></canvas>
 
   <div class="d-panes" id="panes" data-layout="grid" data-active-tool="nav">
-    <section class="pane is-focus" data-pane="axial" aria-label="Аксиальная проекция">
+    <section class="pane is-focus" data-pane="axial" aria-label="Axial">
       <div class="pane-surface"></div>
       <svg class="pane-ov" aria-hidden="true"></svg>
-      <div class="pane-head">
-        <button type="button" class="pane-title" style="--c:#4C8EFF" title="Развернуть или вернуть четыре окна" aria-label="Axial: развернуть окно"><svg aria-hidden="true"><use href="#i-expand"/></svg>Axial</button>
-        <span class="pane-offset">0.0 мм</span>
+      <div class="plane-chip" style="--plane: var(--plane-axial)">
+        <span class="dot"></span><span class="chip-name">Axial</span><b class="chip-value"></b><span class="unit"></span>
       </div>
-      <div class="pane-scrub" aria-hidden="true"><div class="pane-scrub-thumb"></div></div>
     </section>
-
-    <section class="pane" data-pane="sagittal" aria-label="Сагиттальная проекция">
+    <section class="pane" data-pane="sagittal" aria-label="Sagittal">
       <div class="pane-surface"></div>
       <svg class="pane-ov" aria-hidden="true"></svg>
-      <div class="pane-head">
-        <button type="button" class="pane-title" style="--c:#FF6B6B" title="Развернуть или вернуть четыре окна" aria-label="Sagittal: развернуть окно"><svg aria-hidden="true"><use href="#i-expand"/></svg>Sagittal</button>
-        <span class="pane-offset">0.0 мм</span>
+      <div class="plane-chip" style="--plane: var(--plane-sagittal)">
+        <span class="dot"></span><span class="chip-name">Sagittal</span><b class="chip-value"></b><span class="unit"></span>
       </div>
-      <div class="pane-scrub" aria-hidden="true"><div class="pane-scrub-thumb"></div></div>
     </section>
-
-    <section class="pane" data-pane="coronal" aria-label="Корональная проекция">
+    <section class="pane" data-pane="coronal" aria-label="Coronal">
       <div class="pane-surface"></div>
       <svg class="pane-ov" aria-hidden="true"></svg>
-      <div class="pane-head">
-        <button type="button" class="pane-title" style="--c:#4ED17E" title="Развернуть или вернуть четыре окна" aria-label="Coronal: развернуть окно"><svg aria-hidden="true"><use href="#i-expand"/></svg>Coronal</button>
-        <span class="pane-offset">0.0 мм</span>
+      <div class="plane-chip" style="--plane: var(--plane-coronal)">
+        <span class="dot"></span><span class="chip-name">Coronal</span><b class="chip-value"></b><span class="unit"></span>
       </div>
-      <div class="pane-scrub" aria-hidden="true"><div class="pane-scrub-thumb"></div></div>
     </section>
-
     <section class="pane pane-3d" data-pane="volume" aria-label="3D">
       <div class="pane-surface"></div>
       <svg class="pane-ov" aria-hidden="true"></svg>
-      <div class="pane-head">
-        <button type="button" class="pane-title" style="--c:#B9C2D0" title="Развернуть или вернуть четыре окна" aria-label="3D: развернуть окно"><svg aria-hidden="true"><use href="#i-expand"/></svg>3D</button>
+      <div class="plane-chip" style="--plane: var(--plane-neutral)"><span class="dot"></span><span class="chip-name">3D</span></div>
+      <!-- Готовые ракурсы, как в Vidi Web. -->
+      <div class="views" id="views">
+        <button class="view-btn" type="button" data-view="front">Спереди</button>
+        <button class="view-btn" type="button" data-view="right">Сбоку</button>
+        <button class="view-btn" type="button" data-view="top">Сверху</button>
       </div>
-      <div class="vol-bar">
-        <label class="vol-select">
-          <span class="sr-only">Режим 3D</span>
-          <select id="vol-mode"></select>
-          <svg aria-hidden="true"><use href="#i-chevron"/></svg>
-        </label>
-        <div class="tb-rel">
-          <button type="button" class="vb-btn" data-pop="views-pop" aria-expanded="false" title="Ракурс"><svg><use href="#i-globe"/></svg><svg class="tb-chev"><use href="#i-chevron"/></svg></button>
-          <div class="pop pop-up" id="views-pop" hidden></div>
-        </div>
-        <span class="vb-sep"></span>
-        <div class="vol-clip">
-          <button type="button" class="vb-btn" id="clip-btn" aria-pressed="false" title="Срез объёма"><svg><use href="#i-scissors"/></svg></button>
-          <label class="vol-select vol-select-sm">
-            <span class="sr-only">Плоскость среза</span>
-            <select id="clip-axis"></select>
-            <svg aria-hidden="true"><use href="#i-chevron"/></svg>
-          </label>
-          <input type="range" id="clip-range" min="0" max="100" value="50" aria-label="Положение среза" />
-          <output id="clip-value" class="vb-value">50 %</output>
-          <button type="button" class="vb-btn" id="clip-flip" title="Другая сторона"><svg><use href="#i-flip"/></svg></button>
-        </div>
-        <button type="button" class="vb-btn" id="vol-reset" title="Сбросить ракурс"><svg><use href="#i-reset"/></svg></button>
-      </div>
+      <!-- Панорама есть в Vidi Web и в приложении для Mac; в демо — окно о ней. -->
+      <button class="pane-switch" type="button" data-feature="pano">Панорама</button>
     </section>
   </div>
 
@@ -239,17 +148,48 @@
       <button type="button" class="d-btn d-btn-ghost" id="loader-retry" hidden>Повторить</button>
     </div>
   </div>
-
-  <div class="d-hint" id="hint" hidden>
-    <p class="mouse-only"><b>Клик</b> — перекрестие · <b>Колесо</b> — срезы · <b>⌘/Ctrl + колесо</b> — масштаб · <b>Точки на осях</b> — наклон · <b>Правая кнопка</b> — контраст</p>
-    <p class="touch-only"><b>Касание</b> — перекрестие · <b>Ползунок справа</b> — срезы · <b>Два пальца</b> — масштаб</p>
-    <button type="button" class="d-hint-close" id="hint-close" aria-label="Скрыть подсказку"><svg><use href="#i-close"/></svg></button>
-  </div>
 </main>
 
-<footer class="d-foot" style="min-width:0;max-width:100vw">
-  <span>Упрощённое веб-превью: разрешение снимка снижено для браузера. Полная версия — нативное приложение Vidi для Mac.</span>
-  <span style="color:var(--ink-dim);font-size:13px;max-width:1000px;min-width:0">Vidi предназначена для ознакомительной визуализации DICOM-данных, демонстрации и обучения. Не предназначена для постановки диагноза, планирования лечения или принятия клинических решений. Измерения и виртуальные модели используются только для демонстрации.</span>
+<!-- Бар инструментов — как в Vidi Web: те же значки и тот же порядок. -->
+<div class="toolbar" id="toolbar" role="toolbar" aria-label="Инструменты">
+  <div class="toolbar-pill">
+    <button class="tool" type="button" data-tool="layout" data-target="three" aria-label="Три проекции">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4.5" width="15" height="15" rx="3"/><path class="lay-three" d="M4.5 12.75h15M12 12.75v6.75"/></svg>
+      <span class="sr-only">Проекции</span>
+    </button>
+    <button class="tool" type="button" data-tool="window" aria-label="Окно">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 010 16z" fill="currentColor" stroke="none"/></svg>
+      <span class="sr-only">Окно</span>
+    </button>
+    <button class="tool" type="button" data-tool="slab" aria-label="Толщина слоя">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M4 15h16"/></svg>
+      <span class="sr-only">Слой</span><span class="mm"></span>
+    </button>
+    <button class="tool" type="button" data-tool="ruler" aria-label="Линейка">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15L15 4l5 5L9 20z"/><path d="M8 11l2 2M11 8l2 2M14 13l2 2"/></svg>
+      <span class="sr-only">Линейка</span>
+    </button>
+    <button class="tool" type="button" data-tool="angle" aria-label="Угол">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19h15M5 19L17 6"/><path d="M9 19a6 6 0 00.9-3"/></svg>
+      <span class="sr-only">Угол</span>
+    </button>
+    <button class="tool" type="button" data-tool="pencil" aria-label="Карандаш">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4.5-1 10.3-10.3-3.5-3.5L5 15.5 4 20zM13.5 6.5L17 10"/></svg>
+      <span class="sr-only">Карандаш</span>
+    </button>
+    <button class="tool tool-danger" type="button" data-tool="erase" disabled aria-label="Стереть разметку">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 7V5h4v2M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>
+      <span class="sr-only">Стереть</span>
+    </button>
+    <button class="tool" type="button" data-tool="reset" aria-label="Сброс вида">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 108-8 8 8 0 00-5.7 2.4L4 9"/><path d="M4 4v5h5"/></svg>
+      <span class="sr-only">Сброс</span>
+    </button>
+  </div>
+</div>
+
+<footer class="d-foot">
+  Vidi предназначена для ознакомительной визуализации DICOM-данных, демонстрации и обучения. Не предназначена для постановки диагноза, планирования лечения или принятия клинических решений. Измерения и виртуальные модели используются только для демонстрации.
 </footer>
 
 <dialog class="d-dialog" id="feature-dialog" aria-labelledby="feature-title">
@@ -274,30 +214,28 @@
 </dialog>
 
 <dialog class="d-dialog d-dialog-sm" id="help-dialog" aria-labelledby="help-title">
-  <div class="dlg-body">
-    <button type="button" class="dlg-close" data-close aria-label="Закрыть"><svg><use href="#i-close"/></svg></button>
-    <div class="dlg-content">
-      <h2 id="help-title">Как управлять</h2>
-      <dl class="help-list mouse-only">
-        <dt>Клик или перетаскивание</dt><dd>перекрестие во всех проекциях</dd>
-        <dt>Колесо / два пальца на трекпаде</dt><dd>листать срезы</dd>
-        <dt>⌘ или Ctrl + колесо, щипок</dt><dd>масштаб под курсором</dd>
-        <dt>Цветные точки на осях</dt><dd>наклон осей — например, вдоль корня зуба</dd>
-        <dt>Правая кнопка + движение</dt><dd>яркость и контраст</dd>
-        <dt>Shift + перетаскивание</dt><dd>сдвиг изображения</dd>
-        <dt>Двойной клик</dt><dd>вернуть масштаб</dd>
-        <dt>3D</dt><dd>тянуть — вращать, колесо — масштаб, Shift + перетаскивание — сдвиг, двойной клик — вернуть ракурс</dd>
-        <dt>Клавиши</dt><dd>V — навигация, M — линейка, A — угол, Esc — отменить, Delete — убрать последнее измерение</dd>
-      </dl>
-      <dl class="help-list touch-only">
-        <dt>Касание и ведение пальцем</dt><dd>перекрестие во всех проекциях</dd>
-        <dt>Ползунок у правого края</dt><dd>листать срезы</dd>
-        <dt>Два пальца</dt><dd>масштаб и сдвиг</dd>
-        <dt>Цветные точки на осях</dt><dd>наклон осей</dd>
-        <dt>3D</dt><dd>один палец — вращать, два — масштаб</dd>
-      </dl>
-      <p class="dlg-fine">Демонстрационное КЛКТ, данные пациента удалены. Разрешение снижено до 0.6 мм (HD — 0.4 мм); в приложении снимок открывается в исходном качестве.</p>
+  <div class="sheet-card help-card">
+    <div class="sheet-head">
+      <div class="card-title" id="help-title">Управление</div>
+      <button class="sheet-x" type="button" data-close aria-label="Закрыть">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
     </div>
+    <ul class="help-list" id="help-list"></ul>
+    <p class="hint touch-only">Без инструмента: касание — перекрестие, протяжка — срезы, щипок — увеличение. Цветные точки на осях — наклон.</p>
+    <p class="hint mouse-only">Клик — перекрестие · колесо — срезы · ⌘/Ctrl + колесо — масштаб · точки на осях — наклон · правая кнопка — контраст · Shift + перетаскивание — сдвиг. Клавиши: V — навигация, M — линейка, A — угол, Esc — отменить.</p>
+    <div class="help-mac">
+      <div class="help-mac-title">Только в Vidi для Mac</div>
+      <div class="help-mac-row">
+        <button type="button" class="lock-chip" data-feature="own"><svg aria-hidden="true"><use href="#i-lock"/></svg>Свои снимки</button>
+        <button type="button" class="lock-chip" data-feature="pano"><svg aria-hidden="true"><use href="#i-lock"/></svg>Панорама</button>
+        <button type="button" class="lock-chip" data-feature="canal"><svg aria-hidden="true"><use href="#i-lock"/></svg>Канал</button>
+        <button type="button" class="lock-chip" data-feature="implant"><svg aria-hidden="true"><use href="#i-lock"/></svg>Модели имплантов</button>
+        <button type="button" class="lock-chip" data-feature="report"><svg aria-hidden="true"><use href="#i-lock"/></svg>PDF-иллюстрации</button>
+      </div>
+    </div>
+    <p class="hint">Демонстрационное КЛКТ, данные пациента удалены. Разрешение снимка снижено для браузера (0.4 мм); в приложении снимок открывается в исходном качестве.</p>
+    <button class="d-btn d-btn-ghost help-ok" type="button" data-close>Понятно</button>
   </div>
 </dialog>
 
