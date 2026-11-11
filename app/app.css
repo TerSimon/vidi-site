@@ -862,9 +862,24 @@ code {
 
 /* ─── Узкий экран: одна панель + переключатель ──────────────────────────── */
 
+/* Кнопка «1 / 3»: виден значок того, что будет по нажатию. */
+.tool[data-target="three"] .lay-one,
+.tool[data-target="one"] .lay-three,
+.help-ico .lay-one { display: none; }
+
 @media (min-width: 721px) {
   /* Четыре панели видны сразу — переключатель проекций не нужен. */
   .planes { display: none; }
+
+  /* «1» на большом экране: одна панель во весь экран и вкладки над ней. */
+  .layout-one .planes { display: flex; }
+  .layout-one .grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    gap: 0;
+  }
+  .layout-one .pane { display: none; }
+  .layout-one .pane.is-active { display: block; }
 }
 
 @media (max-width: 720px) {
@@ -879,6 +894,15 @@ code {
      переключение не пересоздаёт их. */
   .pane { display: none; }
   .pane.is-active { display: block; }
+
+  /* «3» на телефоне: Axial, Sagittal, Coronal друг под другом во всю ширину.
+     Сетки 2×2 на телефоне нет — только столбец. */
+  .layout-three .grid {
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+  }
+  .layout-three .pane { display: block; }
+  .layout-three .pane[data-plane="volume"] { display: none; }
 }
 
 /* Семь кнопок в ряд на телефоне: подписи под значками сжимаются, но не

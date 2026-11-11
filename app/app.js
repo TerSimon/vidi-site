@@ -12,8 +12,8 @@
 
 import {
   auth, activate, check, signOut, seat, storageWorks, SEAT_PING_MS, moduleTicket, moduleURL,
-} from './auth.js?v=0.9.7';
-import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.7';
+} from './auth.js?v=0.9.8';
+import { openArchive, progressOf, ArchiveError, ArchiveCancelled, buildVolume } from './archive.js?v=0.9.8';
 
 /*
   Код просмотра НЕ лежит рядом файлом. Браузерная версия считает снимок сама,
@@ -43,7 +43,7 @@ async function loadViewer() {
   return V;
 }
 
-const VERSION = '0.9.7';
+const VERSION = '0.9.8';
 
 // ─── Мелкие помощники ──────────────────────────────────────────────────────
 
@@ -748,6 +748,7 @@ $('notes-sheet').addEventListener('click', (e) => {
   попадает и видна в проверке app-archive.
 */
 const TOOL_HELP = {
+  layout: 'Одна проекция во весь экран или три сразу. Вкладка сверху открывает проекцию крупно.',
   window: 'Яркость и контраст: ведите пальцем вправо — шире окно, вверх — светлее.',
   slab: 'Толщина панорамы: 25 → 10 → 5 → 1,5 мм. Работает, когда в четвёртой панели панорама.',
   ruler: 'Два касания — расстояние в миллиметрах.',

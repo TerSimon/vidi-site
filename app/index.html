@@ -23,7 +23,7 @@ if (location.pathname === '/app/') {
   }, { once: true });
 }
 </script>
-<link rel="stylesheet" href="app.css?v=0.9.7">
+<link rel="stylesheet" href="app.css?v=0.9.8">
 </head>
 <body>
 
@@ -255,6 +255,15 @@ if (location.pathname === '/app/') {
 
   <div class="toolbar" id="toolbar" role="toolbar" aria-label="Инструменты">
     <div class="toolbar-pill">
+    <!-- Сколько проекций видно: одна во весь экран или три сразу. Значок
+         показывает, что будет по нажатию. -->
+    <button class="tool" type="button" disabled data-tool="layout" data-target="three" aria-label="Три проекции">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect class="lay-one" x="5" y="4" width="14" height="16" rx="2.5"/>
+        <g class="lay-three"><rect x="5" y="3.5" width="14" height="4.6" rx="1.4"/><rect x="5" y="9.7" width="14" height="4.6" rx="1.4"/><rect x="5" y="15.9" width="14" height="4.6" rx="1.4"/></g>
+      </svg>
+      <span class="sr-only">Проекции</span>
+    </button>
     <button class="tool" type="button" disabled data-tool="window" aria-label="Окно">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 010 16z" fill="currentColor" stroke="none"/></svg>
       <span class="sr-only">Окно</span>
@@ -339,6 +348,6 @@ if (location.pathname === '/app/') {
   </div>
 </div>
 
-<script type="module" src="app.js?v=0.9.7"></script>
+<script type="module" src="app.js?v=0.9.8"></script>
 </body>
 </html>
